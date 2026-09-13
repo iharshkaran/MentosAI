@@ -42,9 +42,21 @@ const generateContent = asyncHandler(async (req, res) => {
         const rawOutputs = await runOrchestrator(context, job.outputTypes, job.config);
 
 
-        // Step 5: har output ko validate + format karo
+        // Step 5: har output ko validate + format karo (sirf agar generator succeed hua ho)
         const finalOutputs = [];
         for (const raw of rawOutputs) {
+            if (raw.error || !raw.content) {
+                finalOutputs.push({
+                    type: raw.type,
+                    rawContent: null,
+                    validation: null,
+                    exportedFilePath: null,
+                    status: "failed",
+                    error: raw.error || "Generator returned empty content",
+                });
+                continue; // validate/format skip karo is output ke liye
+            }
+
             const validation = await validateOutput(raw.content, context);
             const exportedFilePath = await formatOutput(raw.type, raw.content);
 
@@ -53,11 +65,13 @@ const generateContent = asyncHandler(async (req, res) => {
                 rawContent: raw.content,
                 validation,
                 exportedFilePath,
-                status: raw.error ? "failed" : "success",
-                error: raw.error || undefined,
+                status: "success",
+                error: undefined,
             });
         }
 
+
+        
 
         // Step 6: job ko final update do
         job.outputs = finalOutputs;

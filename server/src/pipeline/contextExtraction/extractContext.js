@@ -3,7 +3,7 @@ const { askClaude } = require("../../services/llm.service");
 const buildPrompt = (text) => `
 You are analyzing source content that will be transformed into multiple output formats (LinkedIn posts, advisories, presentations, etc.).
 
-Read the following content and extract structured information about it. Respond ONLY with valid JSON in this exact shape, no other text:
+Read the following content and extract structured information about it. Respond ONLY with valid JSON in this exact shape, no other text. Keep keyPoints to a maximum of 5 short items, and entities to a maximum of 8 items.
 
 {
   "summary": "a 2-3 sentence summary of the content",
@@ -22,10 +22,9 @@ ${text}
 
 const extractContext = async (cleanText) => {
     const prompt = buildPrompt(cleanText);
-    const response = await askClaude(prompt, 1024);
+    const response = await askClaude(prompt, 2048);
 
     try {
-        // Claude kabhi-kabhi markdown fences (```json) ke saath wrap kar deta hai, unhe hata do
         const cleaned = response.replace(/```json|```/g, "").trim();
         return JSON.parse(cleaned);
     } catch (err) {

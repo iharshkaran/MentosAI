@@ -5,7 +5,7 @@ const { GoogleGenAI } = require("@google/genai");
 
 const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
-const MODEL = "gemini-3.8-flash";
+const MODEL = "gemini-3.5-flash-lite";
 
 const askClaude = async (prompt, maxTokens = 1024) => {
     const response = await client.models.generateContent({
