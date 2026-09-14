@@ -57,4 +57,22 @@ const askClaudeWithFile = async (filePath, mimeType, prompt) => {
     return response.text;
 };
 
-module.exports = { askClaude, askClaudeWithImage, askClaudeWithMedia, askClaudeWithFile };
+
+
+const IMAGE_MODEL = "gemini-2.5-flash-image";
+
+const generateImage = async (prompt) => {
+    const response = await client.models.generateContent({
+        model: IMAGE_MODEL,
+        contents: prompt,
+    });
+
+    const imagePart = response.candidates[0].content.parts.find((p) => p.inlineData);
+    if (!imagePart) {
+        throw new Error("Gemini did not return an image for this prompt");
+    }
+
+    return Buffer.from(imagePart.inlineData.data, "base64");
+};
+
+module.exports = { askClaude, askClaudeWithImage, askClaudeWithMedia, askClaudeWithFile, generateImage };
