@@ -1,14 +1,19 @@
 const { linkedinGenerator } = require("./linkedin.generator");
+const { twitterGenerator } = require("./twitter.generator");
+const { advisoryGenerator } = require("./advisory.generator");
+const { execSummaryGenerator } = require("./execSummary.generator");
+const { presentationGenerator } = require("./presentation.generator");
+const { infographicGenerator } = require("./infographic.generator");
+const { videoPackageGenerator } = require("./videoPackage.generator");
 
-// Abhi sirf linkedin ready hai — baaki generators isi pattern mein baad mein add honge
 const generatorRegistry = {
   linkedin: linkedinGenerator,
-  // twitter: twitterGenerator,
-  // advisory: advisoryGenerator,
-  // execSummary: execSummaryGenerator,
-  // presentation: presentationGenerator,
-  // infographic: infographicGenerator,
-  // videoPackage: videoPackageGenerator,
+  twitter: twitterGenerator,
+  advisory: advisoryGenerator,
+  execSummary: execSummaryGenerator,
+  presentation: presentationGenerator,
+  infographic: infographicGenerator,
+  videoPackage: videoPackageGenerator,
 };
 
 module.exports = { generatorRegistry };

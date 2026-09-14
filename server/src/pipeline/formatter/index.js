@@ -1,14 +1,21 @@
 const { toText } = require("./toText");
-
-const TEXT_TYPES = ["linkedin", "twitter"]; // ye simple text hain
-// presentation -> toPptx, advisory/execSummary -> toPdf (baad mein add honge)
+const { toPptx } = require("./toPptx");
+const { toPdf } = require("./toPdf");
 
 const formatOutput = async (type, content) => {
-  if (TEXT_TYPES.includes(type)) {
-    return toText(type, content);
-  }
-  // Fallback: jab tak specific formatter na bane, text hi save karo
-  return toText(type, content);
+    switch (type) {
+        case "presentation":
+            return toPptx(content);
+        case "advisory":
+        case "execSummary":
+            return toPdf(type, content);
+        case "linkedin":
+        case "twitter":
+        case "infographic":
+        case "videoPackage":
+        default:
+            return toText(type, content);
+    }
 };
 
 module.exports = { formatOutput };

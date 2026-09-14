@@ -1,37 +1,63 @@
-const { parsePdf } = require("./parsePdf");
-const { parseDocx } = require("./parseDocx");
+const path = require("path");
+const { parseOfficeFile } = require("./parseOfficeFile");
 const { imageToText } = require("./imageToText");
-const { transcribeAudio } = require("./transcribeAudio");
+const { transcribeMedia } = require("./transcribeMedia");
+const { parseGeneric } = require("./parseGeneric");
+const { extractFromUrl } = require("./extractFromUrl");
 const { chunkAndSummarize } = require("./chunkAndSummarize");
 
-const preprocess = async ({ sourceType, filePath, rawText }) => {
-  let extractedText;
+const OFFICE_EXT = [".pdf", ".docx", ".pptx", ".xlsx", ".odt", ".odp", ".ods", ".rtf", ".csv", ".md", ".epub", ".html", ".htm"];
+const IMAGE_EXT = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+const AV_EXT = [".mp3", ".wav", ".m4a", ".mp4", ".mov", ".webm"];
+const URL_ONLY_REGEX = /^https?:\/\/\S+$/i;
 
-  switch (sourceType) {
-    case "text":
-    case "url":
-      extractedText = rawText;
-      break;
-    case "pdf":
-      extractedText = await parsePdf(filePath);
-      break;
-    case "docx":
-      extractedText = await parseDocx(filePath);
-      break;
-    case "image":
-      extractedText = await imageToText(filePath);
-      break;
-    case "audio":
-    case "video":
-      extractedText = await transcribeAudio(filePath);
-      break;
-    default:
-      throw new Error(`Unsupported sourceType: ${sourceType}`);
+const extractSingleFile = async (file) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+
+  if (OFFICE_EXT.includes(ext)) return parseOfficeFile(file.path, ext);
+  if (IMAGE_EXT.includes(ext)) return imageToText(file.path);
+  if (AV_EXT.includes(ext)) return transcribeMedia(file.path, ext);
+
+  return parseGeneric(file.path);
+};
+
+const preprocess = async ({ files, rawText, url }) => {
+  const sections = [];
+  let resolvedUrl = url;
+  let resolvedText = rawText;
+
+  // Agar rawText khud ek bare URL hai (jaisa YouTube link paste karne pe hota hai),
+  // usse "url" ki tarah treat karo, plain text ki tarah nahi
+  if (resolvedText && URL_ONLY_REGEX.test(resolvedText.trim()) && !resolvedUrl) {
+    resolvedUrl = resolvedText.trim();
+    resolvedText = null;
   }
 
-  // Large text chunking + map-reduce summarization (only kicks in if needed)
-  const result = await chunkAndSummarize(extractedText);
-  return result;
+  if (files && files.length > 0) {
+    const extractedTexts = await Promise.all(
+      files.map(async (file) => {
+        const text = await extractSingleFile(file);
+        return `--- Source: ${file.originalname} ---\n${text}`;
+      })
+    );
+    sections.push(...extractedTexts);
+  }
+
+  if (resolvedText) {
+    sections.push(`--- Source: pasted text ---\n${resolvedText}`);
+  }
+
+  if (resolvedUrl) {
+    const urlText = await extractFromUrl(resolvedUrl);
+    sections.push(`--- Source: ${resolvedUrl} ---\n${urlText}`);
+  }
+
+  if (sections.length === 0) {
+    throw new Error("No source content provided");
+  }
+
+  const combinedText = sections.join("\n\n");
+  return chunkAndSummarize(combinedText);
 };
 
 module.exports = { preprocess };

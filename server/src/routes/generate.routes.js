@@ -1,5 +1,5 @@
 const express = require("express");
-// const { requireAuth } = require("@clerk/express");
+const { requireAuthApi } = require("../middlewares/auth.middleware");
 const multer = require("multer");
 const generateController = require("../controllers/generate.controller");
 
@@ -8,8 +8,8 @@ const upload = multer({ dest: "uploads/" });
 
 router.post(
   "/generate",
-//   requireAuth(),
-  upload.single("file"),
+  requireAuthApi,
+  upload.array("files", 5),
   generateController.generateContent
 );
 

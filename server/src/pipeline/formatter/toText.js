@@ -6,7 +6,7 @@ const toText = async (type, content) => {
   const filePath = path.join(__dirname, "../../../outputs", fileName);
 
   fs.writeFileSync(filePath, content, "utf-8");
-  return filePath;
+  return fileName;
 };
 
 module.exports = { toText };

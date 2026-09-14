@@ -9,7 +9,7 @@ const { formatOutput } = require("../pipeline/formatter");
 
 const generateContent = asyncHandler(async (req, res) => {
     const { sourceType, outputTypes, config } = req.body;
-    const userId = req.auth?.userId || "test-user-123";
+    const userId = req.userId;
 
     // Step 1: naya job banao — abhi "pending" state mein
     const job = await Job.create({
@@ -24,9 +24,13 @@ const generateContent = asyncHandler(async (req, res) => {
     try {
         // Step 2: file/text ko clean text mein convert karo
         const preprocessed = await preprocess({
-            sourceType,
-            filePath: req.file ? req.file.path : null,
+            // sourceType,
+            // filePath: req.file ? req.file.path : null,
+            // rawText: req.body.rawText || null,
+            
+            files: req.files,   // req.file (singular) NAHI — req.files (array)
             rawText: req.body.rawText || null,
+            url: req.body.url || null,
         });
 
 
@@ -71,7 +75,7 @@ const generateContent = asyncHandler(async (req, res) => {
         }
 
 
-        
+
 
         // Step 6: job ko final update do
         job.outputs = finalOutputs;
