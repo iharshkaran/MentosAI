@@ -43,9 +43,17 @@ const ResultCard = ({ output }) => {
                         </div>
                     )}
 
-                    <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-6">
-                        {output.rawContent}
-                    </p>
+                    {output.type === "infographic" ? (
+                        <img
+                            src={`${API_BASE}/outputs/${output.exportedFilePath}`}
+                            alt="Generated infographic"
+                            className="w-full rounded-lg border mb-2"
+                        />
+                    ) : (
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-6">
+                            {output.rawContent}
+                        </p>
+                    )}
 
 
                     <a href={`${API_BASE}/api/download/${output.exportedFilePath}`}
