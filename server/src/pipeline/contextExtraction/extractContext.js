@@ -1,4 +1,5 @@
 const { askClaude } = require("../../services/llm.service");
+const { DOMAIN_CATEGORIES } = require("../generators/domainTone");
 
 const buildPrompt = (text) => `
 You are analyzing source content that will be transformed into multiple output formats (LinkedIn posts, advisories, presentations, etc.).
@@ -11,7 +12,8 @@ Read the following content and extract structured information about it. Respond 
   "keyPoints": ["point 1", "point 2", "point 3"],
   "entities": ["important names, organizations, or terms mentioned"],
   "domain": "the subject area, e.g. 'cybersecurity', 'finance', 'general'",
-  "toneOfSource": "the tone of the original content, e.g. 'formal', 'urgent', 'neutral'"
+  "toneOfSource": "the tone of the original content, e.g. 'formal', 'urgent', 'neutral'",
+  "sourceCategory": "classify the content as exactly one of: ${DOMAIN_CATEGORIES.join(", ")}, or 'other' if none fit"
 }
 
 Content:
@@ -21,15 +23,17 @@ ${text}
 `;
 
 const extractContext = async (cleanText) => {
-    const prompt = buildPrompt(cleanText);
-    const response = await askClaude(prompt, 2048);
+  const prompt = buildPrompt(cleanText);
+  const response = await askClaude(prompt, 2048);
 
-    try {
-        const cleaned = response.replace(/```json|```/g, "").trim();
-        return JSON.parse(cleaned);
-    } catch (err) {
-        throw new Error(`Failed to parse context extraction response: ${err.message}`);
-    }
+  try {
+    const cleaned = response.replace(/```json|```/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const jsonString = jsonMatch ? jsonMatch[0] : cleaned;
+    return JSON.parse(jsonString);
+  } catch (err) {
+    throw new Error(`Failed to parse context extraction response: ${err.message}`);
+  }
 };
 
 module.exports = { extractContext };
