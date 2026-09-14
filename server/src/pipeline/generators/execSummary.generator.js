@@ -1,6 +1,8 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const execSummaryGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
     const prompt = `
 Write a concise executive summary based on the following content.
 

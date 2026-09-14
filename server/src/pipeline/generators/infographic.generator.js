@@ -1,6 +1,8 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const infographicGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
     const prompt = `
 Create infographic content based on the following — this will guide a designer, so describe layout and key messaging clearly.
 
@@ -12,7 +14,7 @@ Respond ONLY with valid JSON in this exact shape, no other text:
 {
   "headline": "main headline for the infographic",
   "sections": [
-    { "label": "short label", "stat_or_point": "a number, stat, or key point", "description": "one-line description" }
+    { "label": "short label", "stat_or_point": "a specific number, percentage, or short punchy phrase — NOT a generic 'Step N' label", "description": "one-line description" }
   ],
   "layoutSuggestion": "brief note on how sections should be visually arranged (e.g. top-to-bottom flow, comparison columns)"
 }

@@ -1,6 +1,9 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const presentationGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
+    
     const prompt = `
 Create presentation content (slides + speaker notes) based on the following.
 

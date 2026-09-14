@@ -1,6 +1,9 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const twitterGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
+    
     const prompt = `
 Write a Twitter/X post (or short thread if needed) based on the following content.
 

@@ -1,6 +1,9 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const linkedinGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
+    
     const prompt = `
 Write a professional LinkedIn post based on the following content summary.
 

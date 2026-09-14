@@ -1,6 +1,9 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const videoPackageGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
+    
     const prompt = `
 Create a complete short-video package based on the following content.
 

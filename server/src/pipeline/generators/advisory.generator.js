@@ -1,6 +1,9 @@
 const { askClaude } = require("../../services/llm.service");
+const { getDomainGuidance } = require("./domainTone");
 
 const advisoryGenerator = async ({ context, config }) => {
+    const domainGuidance = getDomainGuidance(context.sourceCategory);
+    
     const prompt = `
 Write a structured advisory document based on the following content.
 
