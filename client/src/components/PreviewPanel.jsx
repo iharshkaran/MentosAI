@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AlertTriangle, Download, CheckCircle2, FileText } from "lucide-react";
+import { AlertTriangle, Download, CheckCircle2, X } from "lucide-react";
 
 const LABELS = {
   linkedin: "LinkedIn",
@@ -13,7 +13,7 @@ const LABELS = {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-const PreviewPanel = ({ outputs }) => {
+const PreviewPanel = ({ outputs, onClose }) => {
   const [activeIndex, setActiveIndex] = useState(0);
   const active = outputs[activeIndex];
 
@@ -22,7 +22,7 @@ const PreviewPanel = ({ outputs }) => {
   return (
     <div className="h-full max-h-[800px] flex flex-col bg-white rounded-3xl border border-zinc-200 shadow-2xl shadow-zinc-200/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
       
-      {/* Premium Segmented Controls (Tabs) */}
+      {/* Header Bar with Tabs & Close Button */}
       <div className="bg-zinc-50/80 backdrop-blur-sm border-b border-zinc-200 px-4 py-3 flex items-center justify-between">
         <div className="flex gap-1 overflow-x-auto custom-scrollbar p-1 bg-zinc-200/50 rounded-xl w-fit">
           {outputs.map((o, i) => (
@@ -39,6 +39,18 @@ const PreviewPanel = ({ outputs }) => {
             </button>
           ))}
         </div>
+
+        {/* Close Button */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            type="button"
+            className="p-1.5 text-zinc-400 hover:text-zinc-800 hover:bg-zinc-200/60 rounded-xl transition-all"
+            title="Close Preview"
+          >
+            <X size={18} />
+          </button>
+        )}
       </div>
 
       {/* Content Area */}
@@ -80,7 +92,7 @@ const PreviewPanel = ({ outputs }) => {
               </div>
             )}
 
-            {/* The Actual Content */}
+            {/* Content Display */}
             {active.type === "infographic" ? (
               <img
                 src={`${API_BASE}/outputs/${active.exportedFilePath}`}
