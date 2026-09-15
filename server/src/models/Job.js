@@ -8,14 +8,16 @@ const OUTPUT_TYPES = [
     "presentation",
     "infographic",
     "videoPackage",
+    "threatIntel",
+    "contractAudit"
 ];
 
 const configSchema = new mongoose.Schema(
     {
         tone: { type: String },
         audience: { type: String },
-        language: { type: String },
-        detailLevel: { type: String, enum: ["brief", "standard", "detailed"] },
+        language: { type: String, default: "en" },
+        detailLevel: { type: String, enum: ["brief", "standard", "detailed"], default: "standard" },
         objective: { type: String },
     },
     { _id: false }
@@ -27,8 +29,15 @@ const contextSchema = new mongoose.Schema(
         intent: { type: String },
         keyPoints: [{ type: String }],
         entities: [{ type: String }],
+        cveIds: [{ type: String }],
         domain: { type: String },
         toneOfSource: { type: String },
+        sourceCategory: { type: String },
+        riskSeverity: {
+            type: String,
+            enum: ["Critical", "High", "Medium", "Low", "N/A"],
+            default: "N/A"
+        },
     },
     { _id: false }
 );
@@ -36,6 +45,7 @@ const contextSchema = new mongoose.Schema(
 const validationSchema = new mongoose.Schema(
     {
         passed: { type: Boolean, required: true },
+        accuracyScore: { type: Number, min: 0, max: 100, default: 100 },
         issues: [{ type: String }],
         checkedAt: { type: Date, default: Date.now },
     },
@@ -54,8 +64,6 @@ const outputSchema = new mongoose.Schema(
     { _id: false }
 );
 
-
-
 const jobSchema = new mongoose.Schema(
     {
         userId: {
@@ -64,7 +72,7 @@ const jobSchema = new mongoose.Schema(
         },
         sourceType: {
             type: String,
-            enum: ["text", "pdf", "docx", "image", "audio", "video", "url"],
+            enum: ["text", "pdf", "docx", "sol", "image", "audio", "video", "url"],
             required: true,
         },
         outputTypes: [{
@@ -81,7 +89,7 @@ const jobSchema = new mongoose.Schema(
         context: contextSchema,
         outputs: [outputSchema],
     },
-    { timestamps: true } // auto-adds createdAt & updatedAt
+    { timestamps: true }
 );
 
 module.exports = mongoose.model("Job", jobSchema);
