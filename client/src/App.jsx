@@ -12,9 +12,6 @@ function App() {
             </SignedOut>
 
             <SignedIn>
-                <div className="flex justify-end p-4">
-                    <UserButton />
-                </div>
                 <Dashboard />
             </SignedIn>
         </>

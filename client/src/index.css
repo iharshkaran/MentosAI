@@ -1,1 +1,47 @@
 @import "tailwindcss";
+
+@theme {
+  --color-paper: #FBF6EA;
+  --color-ink: #12203D;
+  --color-teal: #0F9B8E;
+  --color-coral: #F87171;
+  --color-muted: #8A8371;
+
+  --font-display: "Space Grotesk", sans-serif;
+  --font-body: "Inter", sans-serif;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateX(8px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes glow {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.animate-glow {
+  animation: glow 4s ease-in-out infinite;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+.bg-dot-grid {
+  background-image: radial-gradient(circle, rgba(18, 32, 61, 0.10) 1px, transparent 1px);
+  background-size: 26px 26px;
+}
