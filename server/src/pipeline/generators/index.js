@@ -5,6 +5,8 @@ const { execSummaryGenerator } = require("./execSummary.generator");
 const { presentationGenerator } = require("./presentation.generator");
 const { infographicGenerator } = require("./infographic.generator");
 const { videoPackageGenerator } = require("./videoPackage.generator");
+const { threatIntelGenerator } = require("./threatIntel.generator");
+const { contractAuditGenerator } = require("./contractAudit.generator");
 
 const generatorRegistry = {
   linkedin: linkedinGenerator,
@@ -14,6 +16,8 @@ const generatorRegistry = {
   presentation: presentationGenerator,
   infographic: infographicGenerator,
   videoPackage: videoPackageGenerator,
+  threatIntel: threatIntelGenerator,
+  contractAudit: contractAuditGenerator,
 };
 
 module.exports = { generatorRegistry };

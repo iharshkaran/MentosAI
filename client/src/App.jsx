@@ -1,35 +1,44 @@
 import { Routes, Route, Navigate } from "react-router-dom";
-import { SignedIn, SignedOut, SignIn, SignUp } from "@clerk/clerk-react";
-import Landing from "./pages/Landing"; // 1. Landing Import Added
+import { SignedIn, SignedOut } from "@clerk/clerk-react";
+import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
+import SignInPage from "./pages/SignIn";
+import SignUpPage from "./pages/SignUp";
 import "./index.css";
 
 function App() {
     return (
         <Routes>
-            {/* 2. Public Landing Page Route (Root Path) */}
+            {/* Public Landing Page Route */}
             <Route path="/" element={<Landing />} />
 
-            {/* Public Auth Routes */}
+            {/* Sign-In Route: If logged in, redirect to dashboard. If signed out, show custom SignInPage */}
             <Route
                 path="/sign-in/*"
                 element={
-                    <SignedOut>
-                        <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
-                            <SignIn routing="path" path="/sign-in" signUpUrl="/sign-up" forceRedirectUrl="/dashboard" />
-                        </div>
-                    </SignedOut>
+                    <>
+                        <SignedIn>
+                            <Navigate to="/dashboard" replace />
+                        </SignedIn>
+                        <SignedOut>
+                            <SignInPage />
+                        </SignedOut>
+                    </>
                 }
             />
 
+            {/* Sign-Up Route: If logged in, redirect to dashboard. If signed out, show custom SignUpPage */}
             <Route
                 path="/sign-up/*"
                 element={
-                    <SignedOut>
-                        <div className="min-h-screen flex items-center justify-center bg-[#FAFAFA]">
-                            <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" forceRedirectUrl="/dashboard" />
-                        </div>
-                    </SignedOut>
+                    <>
+                        <SignedIn>
+                            <Navigate to="/dashboard" replace />
+                        </SignedIn>
+                        <SignedOut>
+                            <SignUpPage />
+                        </SignedOut>
+                    </>
                 }
             />
 

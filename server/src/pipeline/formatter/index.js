@@ -7,11 +7,16 @@ const formatOutput = async (type, content) => {
   switch (type) {
     case "presentation":
       return toPptx(content);
+      
     case "advisory":
     case "execSummary":
+    case "threatIntel":
       return toPdf(type, content);
+      
     case "infographic":
       return toInfographicImage(content);
+      
+    case "contractAudit":
     case "linkedin":
     case "twitter":
     case "videoPackage":
