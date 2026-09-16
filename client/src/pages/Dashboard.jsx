@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useAuth, useReverification } from "@clerk/clerk-react";
 import Sidebar from "../components/Sidebar";
 import ConsoleInput from "../components/ConsoleInput";
 import OutputChips from "../components/OutputChips";
@@ -8,6 +9,8 @@ import QuickPrompts from "../components/QuickPrompts";
 import PoweredByRow from "../components/PoweredByRow";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useGenerate } from "../hooks/useGenerate";
+import { getJobById } from "../services/api"; 
+
 
 const Dashboard = () => {
     const [file, setFile] = useState(null);
@@ -21,6 +24,10 @@ const Dashboard = () => {
     });
 
     const [isPinned, setIsPinned] = useState(false);
+    const { getToken } = useAuth();
+    const [currentJobId, setCurrentJobId] = useState(null);
+    const [historyJob, setHistoryJob] = useState(null);
+    const openJobSecurely = useReverification((id) => getJobById(id, getToken));
 
     // 1. Reload par saved output recover karne ke liye initial state
     const [savedResult, setSavedResult] = useState(() => {
@@ -31,7 +38,7 @@ const Dashboard = () => {
     const { generate, loading, result: apiResult, error } = useGenerate();
 
     // 2. Clear result logic
-    const result = apiResult || savedResult;
+    const result = historyJob || apiResult || savedResult;
     const started = loading || !!result;
 
     // 3. Sync API Result with SessionStorage
@@ -54,8 +61,24 @@ const Dashboard = () => {
         setFile(null);
         setText("");
         setSavedResult(null);
+        setHistoryJob(null);
+        setCurrentJobId(null);
         sessionStorage.removeItem("mentos_last_result");
     };
+
+
+
+
+    const handleSelectJob = async (job) => {
+        try {
+            const fullJob = await openJobSecurely(job._id);
+            setHistoryJob(fullJob);
+            setCurrentJobId(job._id);
+        } catch (err) {
+            alert("Verification failed or cancelled.");
+        }
+    };
+
 
     return (
         <div className="flex h-screen bg-[#F9F8F6] text-zinc-900 font-sans overflow-hidden selection:bg-teal-200 selection:text-teal-900">
@@ -75,10 +98,14 @@ const Dashboard = () => {
             />
 
             {/* Sidebar */}
+
             <Sidebar
                 isPinned={isPinned}
                 setIsPinned={setIsPinned}
                 onNewDocument={handleNewDocument}
+                onSelectJob={handleSelectJob}
+                activeJobId={currentJobId}
+                refreshTrigger={result?._id}
             />
 
             {/* Main Content Area */}

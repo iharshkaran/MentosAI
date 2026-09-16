@@ -15,4 +15,20 @@ export const generateContent = async (formData, getToken) => {
     return response.data;
 };
 
+export const getJobs = async (getToken) => {
+  const token = await getToken();
+  const response = await api.get("/api/jobs", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
+export const getJobById = async (id, getToken) => {
+  const token = await getToken();
+  const response = await api.get(`/api/jobs/${id}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  return response.data;
+};
+
 export default api;

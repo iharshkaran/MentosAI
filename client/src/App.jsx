@@ -1,11 +1,15 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { SignedIn, SignedOut, SignIn, SignUp } from "@clerk/clerk-react";
+import Landing from "./pages/Landing"; // 1. Landing Import Added
 import Dashboard from "./pages/Dashboard";
 import "./index.css";
 
 function App() {
     return (
         <Routes>
+            {/* 2. Public Landing Page Route (Root Path) */}
+            <Route path="/" element={<Landing />} />
+
             {/* Public Auth Routes */}
             <Route
                 path="/sign-in/*"
@@ -53,7 +57,7 @@ function App() {
                             <Navigate to="/dashboard" replace />
                         </SignedIn>
                         <SignedOut>
-                            <Navigate to="/sign-in" replace />
+                            <Navigate to="/" replace />
                         </SignedOut>
                     </>
                 }

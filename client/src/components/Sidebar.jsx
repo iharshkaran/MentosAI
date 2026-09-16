@@ -1,19 +1,36 @@
-import { useState } from "react";
-import { UserButton } from "@clerk/clerk-react";
-import { motion } from "motion/react";
+import { useEffect, useState } from "react";
+import { UserButton, useAuth } from "@clerk/clerk-react";
+import { motion, AnimatePresence } from "motion/react";
 import {
     PanelLeftClose,
     PanelLeftOpen,
     Plus,
     LayoutDashboard,
     Clock,
-    Settings
+    Settings,
+    FileText,
+    Link2,
+    Type,
 } from "lucide-react";
+import { getJobs } from "../services/api";
 
 const springTransition = {
     type: "spring",
     stiffness: 350,
     damping: 30
+};
+
+const SOURCE_ICON = { pdf: FileText, docx: FileText, url: Link2, text: Type };
+
+const relativeTime = (dateStr) => {
+    const diffMs = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    return `${days}d ago`;
 };
 
 const SidebarItem = ({ icon, label, expanded, active, onClick }) => (
@@ -43,9 +60,55 @@ const SidebarItem = ({ icon, label, expanded, active, onClick }) => (
     </button>
 );
 
-const Sidebar = ({ isPinned, setIsPinned, onNewDocument }) => {
+const RecentHistoryList = ({ expanded, jobs, activeJobId, onSelectJob }) => (
+    <motion.div
+        initial={false}
+        animate={{
+            height: expanded ? "auto" : 0,
+            opacity: expanded ? 1 : 0,
+        }}
+        transition={springTransition}
+        className="overflow-hidden"
+    >
+        <div className="pl-[34px] pr-1 py-1 space-y-0.5 max-h-56 overflow-y-auto custom-scrollbar">
+            {jobs.length === 0 && (
+                <p className="text-[10px] text-zinc-400 py-1">No generations yet</p>
+            )}
+            {jobs.map((job) => {
+                const Icon = SOURCE_ICON[job.sourceType] || FileText;
+                const title = job.outputTypes?.join(", ") || "Generation";
+                return (
+                    <button
+                        key={job._id}
+                        onClick={() => onSelectJob?.(job)}
+                        className={`w-full flex items-center gap-1.5 px-2 py-1.5 rounded-lg text-left transition-colors ${
+                            activeJobId === job._id
+                                ? "bg-white/80 text-zinc-900"
+                                : "text-zinc-500 hover:bg-white/60 hover:text-zinc-800"
+                        }`}
+                    >
+                        <Icon size={11} className="shrink-0 text-zinc-400" />
+                        <span className="text-[11px] truncate flex-1">{title}</span>
+                        <span className="text-[9px] text-zinc-400 shrink-0">{relativeTime(job.createdAt)}</span>
+                    </button>
+                );
+            })}
+        </div>
+    </motion.div>
+);
+
+const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobId, refreshTrigger }) => {
     const [isHovered, setIsHovered] = useState(false);
+    const [historyOpen, setHistoryOpen] = useState(true);
+    const [jobs, setJobs] = useState([]);
+    const { getToken } = useAuth();
     const sidebarOpen = isPinned || isHovered;
+
+    useEffect(() => {
+        getJobs(getToken)
+            .then((data) => setJobs(data.slice(0, 8)))
+            .catch(() => {});
+    }, [getToken, refreshTrigger]);
 
     return (
         <motion.aside
@@ -94,7 +157,25 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument }) => {
             <nav className="flex-1 px-2 py-2 space-y-1 overflow-y-auto custom-scrollbar">
                 <SidebarItem icon={<Plus size={16} />} label="New Generation" expanded={sidebarOpen} active={true} onClick={onNewDocument} />
                 <SidebarItem icon={<LayoutDashboard size={16} />} label="Dashboard" expanded={sidebarOpen} />
-                <SidebarItem icon={<Clock size={16} />} label="Recent History" expanded={sidebarOpen} />
+
+                <SidebarItem
+                    icon={<Clock size={16} />}
+                    label="Recent History"
+                    expanded={sidebarOpen}
+                    active={historyOpen}
+                    onClick={() => setHistoryOpen((v) => !v)}
+                />
+                <AnimatePresence>
+                    {sidebarOpen && (
+                        <RecentHistoryList
+                            expanded={historyOpen}
+                            jobs={jobs}
+                            activeJobId={activeJobId}
+                            onSelectJob={onSelectJob}
+                        />
+                    )}
+                </AnimatePresence>
+
                 <div className="py-2">
                     <div className="h-px w-full bg-gradient-to-r from-transparent via-zinc-200 to-transparent"></div>
                 </div>
@@ -127,7 +208,7 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument }) => {
                     <span className="text-[11px] font-bold text-zinc-900 leading-tight">My Account</span>
                     <span className="text-[9px] text-zinc-500 font-medium">Manage profile</span>
                 </motion.div>
-                
+
             </div>
         </motion.aside>
     );
