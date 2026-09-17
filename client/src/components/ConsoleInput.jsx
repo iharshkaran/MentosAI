@@ -186,7 +186,7 @@ const ConsoleInput = ({ file, setFile, text, setText, onSubmit, disabled }) => {
               onSubmit();
             }}
             disabled={disabled || (!text.trim() && !file)}
-            className="w-9 h-9 flex items-center justify-center rounded-full bg-gradient-to-tr from-teal-500 to-teal-400 text-white shadow-md transition-all duration-300 hover:shadow-teal-500/25 hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0 disabled:shadow-none"
+            className="w-9 h-9 flex items-center justify-center rounded-full bg-linear-to-tr from-teal-500 to-teal-400 text-white shadow-md transition-all duration-300 hover:shadow-teal-500/25 hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0 disabled:shadow-none"
             type="button"
             aria-label="Generate"
           >

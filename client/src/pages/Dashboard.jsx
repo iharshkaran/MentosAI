@@ -9,10 +9,11 @@ import QuickPrompts from "../components/QuickPrompts";
 import PoweredByRow from "../components/PoweredByRow";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useGenerate } from "../hooks/useGenerate";
-import { getJobById } from "../services/api"; 
+import { getJobById } from "../services/api";
 
 
 const Dashboard = () => {
+    const [elapsed, setElapsed] = useState(0);
     const [file, setFile] = useState(null);
     const [text, setText] = useState("");
     const [outputTypes, setOutputTypes] = useState([]);
@@ -78,6 +79,20 @@ const Dashboard = () => {
             alert("Verification failed or cancelled.");
         }
     };
+
+
+    useEffect(() => {
+        if (!loading) {
+            setElapsed(0);
+            return;
+        }
+        const start = Date.now();
+        const interval = setInterval(() => {
+            setElapsed(((Date.now() - start) / 1000).toFixed(1));
+        }, 100);
+        return () => clearInterval(interval);
+    }, [loading]);
+
 
 
     return (
@@ -172,7 +187,7 @@ const Dashboard = () => {
                             <div className="flex-1 w-full xl:sticky xl:top-[40px] xl:h-[calc(100vh-80px)] animate-in fade-in slide-in-from-right-8 duration-700">
                                 {loading ? (
                                     <div className="h-full min-h-[500px] w-full bg-white/80 backdrop-blur-xl rounded-3xl border border-zinc-200 shadow-xl flex items-center justify-center">
-                                        <LoadingSpinner />
+                                        <LoadingSpinner elapsed={elapsed}/>
                                     </div>
                                 ) : (
                                     <PreviewPanel
