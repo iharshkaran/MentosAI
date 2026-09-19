@@ -151,7 +151,7 @@ const Dashboard = () => {
 
             {/* Main Content Area */}
             <main
-                className={`flex-1 relative h-full transition-all duration-300 ease-in-out z-10 ${isPinned ? "ml-[244px]" : "ml-[88px]"
+                className={`flex-1 relative h-full transition-all duration-300 ease-in-out z-10 ${isPinned ? "ml-[272px]" : "ml-[88px]"
                     }`}
             >
                 <div className="h-full overflow-y-auto custom-scrollbar relative px-6 lg:px-12 pt-12 pb-20">
