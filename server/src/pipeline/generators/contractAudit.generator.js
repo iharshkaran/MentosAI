@@ -1,8 +1,10 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
+const { getLanguageInstruction } = require("./languageInstruction");
 
 const contractAuditGenerator = async ({ context, config }) => {
   const domainGuidance = getDomainGuidance(context.sourceCategory);
+  const languageInstruction = getLanguageInstruction(config.language);
 
   const prompt = `
 You are a Lead Smart Contract Security Auditor analyzing smart contract source code or audit reports.
@@ -11,9 +13,11 @@ Source Summary: ${context.summary}
 Key Issues / Findings: ${context.keyPoints.join("; ")}
 Entities / Contract References: ${context.entities.join(", ")}
 Risk Severity: ${context.riskSeverity || "High"}
-Domain Guidance: ${domainGuidance}
 
 Detail Level: ${config.detailLevel || "standard"}
+
+${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
+${languageInstruction ? `Language: ${languageInstruction}` : ""}
 
 Analyze the content and respond ONLY with valid JSON in this exact structure, no extra commentary:
 {
@@ -38,4 +42,4 @@ Analyze the content and respond ONLY with valid JSON in this exact structure, no
   return askClaude(prompt, 2048);
 };
 
-module.exports = { contractAuditGenerator };
+module.exports = { contractAuditGenerator };

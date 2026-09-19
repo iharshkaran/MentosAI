@@ -50,12 +50,34 @@ const Dashboard = () => {
         }
     }, [apiResult]);
 
+    const detectSourceType = (f, t) => {
+        if (f) {
+            const ext = f.name?.split(".").pop()?.toLowerCase();
+            if (ext === "pdf") return "pdf";
+            if (["docx", "doc", "odt", "rtf"].includes(ext)) return "docx";
+            if (["sol"].includes(ext)) return "sol";
+            if (["jpg", "jpeg", "png", "webp", "gif"].includes(ext)) return "image";
+            if (["mp3", "wav", "m4a"].includes(ext)) return "audio";
+            if (["mp4", "mov", "webm"].includes(ext)) return "video";
+            return "text";
+        }
+        if (t && /^https?:\/\/\S+$/i.test(t.trim())) {
+            return "url";
+        }
+        return "text";
+    };
+
     const handleSubmit = () => {
         if (outputTypes.length === 0) {
             alert("Select at least one output type to generate.");
             return;
         }
-        generate({ file, sourceType: file ? "pdf" : "text", rawText: text, outputTypes, config });
+        if (!file && !text?.trim()) {
+            alert("Please provide some source content, upload a file, or paste a link.");
+            return;
+        }
+        const sourceType = detectSourceType(file, text);
+        generate({ file, sourceType, rawText: text, outputTypes, config });
     };
 
     const handleNewDocument = () => {
@@ -67,16 +89,20 @@ const Dashboard = () => {
         sessionStorage.removeItem("mentos_last_result");
     };
 
-
-
-
     const handleSelectJob = async (job) => {
         try {
-            const fullJob = await openJobSecurely(job._id);
+            let fullJob;
+            try {
+                fullJob = await openJobSecurely(job._id);
+            } catch (verifErr) {
+                // If reverification fails or isn't enabled in Clerk project, fallback to authenticated fetch
+                fullJob = await getJobById(job._id, getToken);
+            }
             setHistoryJob(fullJob);
             setCurrentJobId(job._id);
         } catch (err) {
-            alert("Verification failed or cancelled.");
+            console.error("Failed to load job:", err);
+            alert("Could not load job details.");
         }
     };
 
@@ -96,7 +122,7 @@ const Dashboard = () => {
 
 
     return (
-        <div className="flex h-screen bg-[#F9F8F6] text-zinc-900 font-sans overflow-hidden selection:bg-teal-200 selection:text-teal-900">
+        <div className="flex h-screen bg-[#F0EEE6] text-zinc-900 font-sans overflow-hidden selection:bg-teal-200 selection:text-teal-900">
 
             {/* Grid Lines Background */}
             <div

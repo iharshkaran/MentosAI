@@ -1,8 +1,11 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
+const { getLanguageInstruction } = require("./languageInstruction");
 
 const execSummaryGenerator = async ({ context, config }) => {
     const domainGuidance = getDomainGuidance(context.sourceCategory);
+    const languageInstruction = getLanguageInstruction(config.language);
+
     const prompt = `
 Write a concise executive summary based on the following content.
 
@@ -13,6 +16,9 @@ Intent: ${context.intent}
 
 Tone: ${config.tone || "professional"}
 Audience: ${config.audience || "executives and decision-makers"}
+
+${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
+${languageInstruction ? `Language: ${languageInstruction}` : ""}
 
 Rules:
 - Maximum 200 words.
@@ -25,4 +31,4 @@ Write ONLY the executive summary, ready to share.
     return askClaude(prompt, 600);
 };
 
-module.exports = { execSummaryGenerator };
+module.exports = { execSummaryGenerator };

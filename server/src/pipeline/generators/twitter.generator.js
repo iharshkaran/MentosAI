@@ -1,9 +1,11 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
+const { getLanguageInstruction } = require("./languageInstruction");
 
 const twitterGenerator = async ({ context, config }) => {
     const domainGuidance = getDomainGuidance(context.sourceCategory);
-    
+    const languageInstruction = getLanguageInstruction(config.language);
+
     const prompt = `
 Write a Twitter/X post (or short thread if needed) based on the following content.
 
@@ -13,6 +15,9 @@ Domain: ${context.domain}
 
 Tone: ${config.tone || "engaging"}
 Audience: ${config.audience || "general public"}
+
+${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
+${languageInstruction ? `Language: ${languageInstruction}` : ""}
 
 Rules:
 - Each tweet must be under 280 characters.

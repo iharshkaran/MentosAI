@@ -1,9 +1,11 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
+const { getLanguageInstruction } = require("./languageInstruction");
 
 const advisoryGenerator = async ({ context, config }) => {
     const domainGuidance = getDomainGuidance(context.sourceCategory);
-    
+    const languageInstruction = getLanguageInstruction(config.language);
+
     const prompt = `
 Write a structured advisory document based on the following content.
 
@@ -14,6 +16,9 @@ Domain: ${context.domain}
 Tone: ${config.tone || "formal"}
 Audience: ${config.audience || "relevant stakeholders"}
 Detail level: ${config.detailLevel || "standard"}
+
+${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
+${languageInstruction ? `Language: ${languageInstruction}` : ""}
 
 Structure the advisory with these sections:
 1. Title
@@ -28,4 +33,4 @@ Write ONLY the advisory content, ready to publish.
     return askClaude(prompt, 1200);
 };
 
-module.exports = { advisoryGenerator };
+module.exports = { advisoryGenerator };

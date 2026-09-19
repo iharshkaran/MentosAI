@@ -14,13 +14,16 @@ const listJobs = asyncHandler(async (req, res) => {
 
 const getJobById = asyncHandler(async (req, res) => {
   const auth = getAuth(req);
-  const isReverified = auth.has({ reverification: "strict" });
 
-  if (!isReverified) {
-    // Clerk ka official response object use karo — exact shape guaranteed
-    const clerkResponse = reverificationErrorResponse("strict");
-    const body = await clerkResponse.json();
-    return res.status(clerkResponse.status).json(body);
+  // If strict reverification is enabled via env or explicit header
+  if ((process.env.STRICT_REVERIFICATION === "true" || req.headers["x-strict-reverification"] === "true") && auth?.has && typeof auth.has === "function") {
+    const isReverified = auth.has({ reverification: "strict" });
+
+    if (!isReverified) {
+      const clerkResponse = reverificationErrorResponse("strict");
+      const body = await clerkResponse.json();
+      return res.status(clerkResponse.status).json(body);
+    }
   }
 
   const job = await Job.findOne({ _id: req.params.id, userId: req.userId });

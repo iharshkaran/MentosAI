@@ -3,16 +3,21 @@ import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText }
 import ReactMarkdown from "react-markdown";
 import SlidePreview from "./SlidePreview";
 import StoryboardPreview from "./StoryboardPreview";
+import ContractAuditPreview from "./ContractAuditPreview";
 import StatsModal from "./StatsModal";
 
 const LABELS = {
     linkedin: "LinkedIn Post",
     twitter: "X Thread",
     advisory: "Threat Advisory",
+    execSummary: "Exec Summary",
     summary: "Exec Summary",
     presentation: "Presentation",
     infographic: "Infographic",
-    video: "Video Package"
+    videoPackage: "Video Package",
+    video: "Video Package",
+    threatIntel: "Threat Intel",
+    contractAudit: "Contract Audit",
 };
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
@@ -165,6 +170,8 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose }) => {
                                 <SlidePreview rawContent={active.rawContent} />
                             ) : active.type === "videoPackage" ? (
                                 <StoryboardPreview rawContent={active.rawContent} />
+                            ) : active.type === "contractAudit" ? (
+                                <ContractAuditPreview rawContent={active.rawContent} />
                             ) : (
                                 <div className="prose-content text-sm md:text-[15px] text-zinc-700 leading-relaxed">
                                     <ReactMarkdown>{active.rawContent || "No content generated. Check the download file if available."}</ReactMarkdown>

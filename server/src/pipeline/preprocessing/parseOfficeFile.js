@@ -9,9 +9,9 @@ const EXT_TO_FILETYPE = {
 
 const parseOfficeFile = async (filePath, ext) => {
   const fileType = EXT_TO_FILETYPE[ext];
-  const ast = await officeParser.parseOffice(filePath, { fileType });
-  const { value } = await ast.to("text");
-  return value;
+  // officeparser v7+ returns an object with a toText() method
+  const result = await officeParser.parseOffice(filePath, { fileType });
+  return result.toText();
 };
 
 module.exports = { parseOfficeFile };

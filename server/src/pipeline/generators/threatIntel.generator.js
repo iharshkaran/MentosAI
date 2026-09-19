@@ -1,8 +1,10 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
+const { getLanguageInstruction } = require("./languageInstruction");
 
 const threatIntelGenerator = async ({ context, config }) => {
   const domainGuidance = getDomainGuidance(context.sourceCategory);
+  const languageInstruction = getLanguageInstruction(config.language);
 
   const prompt = `
 You are a Senior Threat Intelligence Analyst producing an actionable Threat Advisory / Security Alert.
@@ -12,11 +14,13 @@ Key Points: ${context.keyPoints.join("; ")}
 Detected Entities / IOCs: ${context.entities.join(", ")}
 CVE IDs: ${context.cveIds ? context.cveIds.join(", ") : "None"}
 Risk Severity: ${context.riskSeverity || "High"}
-Domain Guidance: ${domainGuidance}
 
 Target Audience: ${config.audience || "SOC Analysts, CISOs, & IT Security Teams"}
 Tone: ${config.tone || "authoritative and urgent"}
 Detail Level: ${config.detailLevel || "standard"}
+
+${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
+${languageInstruction ? `Language: ${languageInstruction}` : ""}
 
 Generate a comprehensive Threat Intelligence Advisory formatted in clean Markdown with the following structured sections:
 1. Executive Summary & Severity Rating
@@ -31,4 +35,4 @@ Write high-quality, professional security advisory content. Do NOT wrap output i
   return askClaude(prompt, 2048);
 };
 
-module.exports = { threatIntelGenerator };
+module.exports = { threatIntelGenerator };

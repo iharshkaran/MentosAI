@@ -8,6 +8,8 @@ const OUTPUT_OPTIONS = [
   { value: "presentation", label: "Presentation" },
   { value: "infographic", label: "Infographic" },
   { value: "videoPackage", label: "Video Package" },
+  { value: "threatIntel", label: "Threat Intel" },
+  { value: "contractAudit", label: "Contract Audit" },
 ];
 
 const OutputChips = ({ selected, setSelected }) => {

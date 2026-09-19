@@ -18,9 +18,8 @@ const extractWebpageText = async (url) => {
     responseType: "text",
   });
 
-  const ast = await officeParser.parseOffice(Buffer.from(html), { fileType: "html" });
-  const { value } = await ast.to("text");
-  return value;
+  const result = await officeParser.parseOffice(Buffer.from(html), { fileType: "html" });
+  return result.toText();
 };
 
 const extractFromUrl = async (url) => {

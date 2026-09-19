@@ -9,6 +9,8 @@ const LABELS = {
     presentation: "Presentation",
     infographic: "Infographic",
     videoPackage: "Video Package",
+    threatIntel: "Threat Intelligence Advisory",
+    contractAudit: "Smart Contract Audit",
 };
 
 const ResultCard = ({ output }) => {

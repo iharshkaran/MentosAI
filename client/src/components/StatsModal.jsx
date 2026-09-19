@@ -1,9 +1,15 @@
 import { X, CheckCircle2, AlertTriangle, XCircle, Clock, BarChart3, Zap, Activity, ShieldCheck } from "lucide-react";
 
 const LABELS = {
-    linkedin: "LinkedIn Post", twitter: "X Thread", advisory: "Threat Advisory",
-    execSummary: "Exec Summary", presentation: "Presentation",
-    infographic: "Infographic", videoPackage: "Video Package",
+    linkedin: "LinkedIn Post",
+    twitter: "X Thread",
+    advisory: "Threat Advisory",
+    execSummary: "Exec Summary",
+    presentation: "Presentation",
+    infographic: "Infographic",
+    videoPackage: "Video Package",
+    threatIntel: "Threat Intel",
+    contractAudit: "Contract Audit",
 };
 
 const StatsModal = ({ outputs, generationTimeMs, onClose }) => {
