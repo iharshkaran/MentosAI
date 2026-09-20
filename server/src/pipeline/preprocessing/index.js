@@ -21,7 +21,7 @@ const extractSingleFile = async (file) => {
   return parseGeneric(file.path);
 };
 
-const preprocess = async ({ files, rawText, url }) => {
+const preprocess = async ({ files, rawText, url, detailLevel }) => {
   const sections = [];
   let resolvedUrl = url;
   let resolvedText = rawText;
@@ -57,7 +57,7 @@ const preprocess = async ({ files, rawText, url }) => {
   }
 
   const combinedText = sections.join("\n\n");
-  return chunkAndSummarize(combinedText);
+  return chunkAndSummarize(combinedText, { detailLevel });
 };
 
 module.exports = { preprocess };

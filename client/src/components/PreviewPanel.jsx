@@ -1,10 +1,11 @@
 import { useState, useEffect } from "react";
-import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText } from "lucide-react";
+import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText, Fingerprint, Link2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import SlidePreview from "./SlidePreview";
 import StoryboardPreview from "./StoryboardPreview";
 import ContractAuditPreview from "./ContractAuditPreview";
 import StatsModal from "./StatsModal";
+import { verifyLedgerJob } from "../services/api";
 
 const LABELS = {
     linkedin: "LinkedIn Post",
@@ -22,10 +23,27 @@ const LABELS = {
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-const PreviewPanel = ({ outputs, generationTimeMs, onClose }) => {
+const severityStyles = {
+    Critical: "bg-red-100 text-red-700 border-red-200",
+    High: "bg-orange-100 text-orange-700 border-orange-200",
+    Medium: "bg-amber-100 text-amber-800 border-amber-200",
+    Low: "bg-emerald-100 text-emerald-700 border-emerald-200",
+    "N/A": "bg-zinc-100 text-zinc-600 border-zinc-200",
+};
+
+const domainLabel = (domain) => {
+    if (!domain) return "General";
+    if (domain.toLowerCase().includes("cyber")) return "Cybersecurity";
+    if (domain.toLowerCase().includes("block")) return "Blockchain";
+    return domain.charAt(0).toUpperCase() + domain.slice(1);
+};
+
+const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainProof, jobId }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     const [copied, setCopied] = useState(false);
     const [showStats, setShowStats] = useState(false);
+    const [verifyState, setVerifyState] = useState(null);
+    const [verifying, setVerifying] = useState(false);
 
     // Jab tab change ho, toh 'copied' state ko reset kar do
     useEffect(() => {
@@ -46,6 +64,19 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose }) => {
             navigator.clipboard.writeText(active.rawContent);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const handleVerifySeal = async () => {
+        if (!jobId) return;
+        setVerifying(true);
+        try {
+            const data = await verifyLedgerJob(jobId);
+            setVerifyState(data);
+        } catch (err) {
+            setVerifyState({ verified: false, error: err.response?.data?.error || "Verification failed" });
+        } finally {
+            setVerifying(false);
         }
     };
 
@@ -103,6 +134,74 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose }) => {
                     </span>
                 )}
             </div>
+
+            {(context || blockchainProof) && (
+                <div className="px-5 py-3 border-b border-zinc-100 bg-zinc-50/70 space-y-3">
+                    {context && (
+                        <div>
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-2">
+                                Cyber & Blockchain Intelligence
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-teal-50 text-teal-800 border border-teal-100">
+                                    Domain: {domainLabel(context.domain)}
+                                </span>
+                                <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${severityStyles[context.riskSeverity] || severityStyles["N/A"]}`}>
+                                    Risk: {context.riskSeverity || "N/A"}
+                                </span>
+                                {(context.cveIds || []).slice(0, 6).map((cve) => (
+                                    <span key={cve} className="px-2 py-1 rounded-md text-[11px] font-mono bg-white border border-zinc-200 text-zinc-700">
+                                        {cve}
+                                    </span>
+                                ))}
+                                {(context.entities || []).slice(0, 8).map((entity) => (
+                                    <span key={entity} className="px-2 py-1 rounded-full text-[11px] bg-zinc-100 text-zinc-600 border border-zinc-200">
+                                        {entity}
+                                    </span>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {blockchainProof && (
+                        <button
+                            type="button"
+                            onClick={handleVerifySeal}
+                            className="w-full text-left rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2.5 hover:bg-emerald-50 transition-colors"
+                        >
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2 min-w-0">
+                                    <Fingerprint size={16} className="text-emerald-600 shrink-0" />
+                                    <div className="min-w-0">
+                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                                            Cryptographic Blockchain Seal
+                                        </p>
+                                        <p className="text-xs text-zinc-700 truncate font-mono">
+                                            Block #{blockchainProof.blockIndex} · {blockchainProof.blockHash}
+                                        </p>
+                                    </div>
+                                </div>
+                                <span className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] font-semibold bg-emerald-600 text-white">
+                                    <ShieldCheck size={12} />
+                                    {verifying
+                                        ? "Verifying…"
+                                        : verifyState?.verified === false
+                                            ? "Invalid"
+                                            : "Tamper-Proof Verified"}
+                                </span>
+                            </div>
+                            {verifyState && (
+                                <p className={`mt-2 text-[11px] flex items-center gap-1 ${verifyState.verified ? "text-emerald-700" : "text-red-600"}`}>
+                                    <Link2 size={12} />
+                                    {verifyState.verified
+                                        ? verifyState.chainIntegrity || "Chain integrity confirmed"
+                                        : verifyState.error || "Hash mismatch"}
+                                </p>
+                            )}
+                        </button>
+                    )}
+                </div>
+            )}
 
             {/* Modal Render */}
             {showStats && (

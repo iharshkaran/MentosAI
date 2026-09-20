@@ -1,6 +1,7 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
 const { getLanguageInstruction } = require("./languageInstruction");
+const { getMaxTokens, getDepthInstruction } = require("./tokenBudget");
 
 const threatIntelGenerator = async ({ context, config }) => {
   const domainGuidance = getDomainGuidance(context.sourceCategory);
@@ -17,7 +18,7 @@ Risk Severity: ${context.riskSeverity || "High"}
 
 Target Audience: ${config.audience || "SOC Analysts, CISOs, & IT Security Teams"}
 Tone: ${config.tone || "authoritative and urgent"}
-Detail Level: ${config.detailLevel || "standard"}
+${getDepthInstruction(config.detailLevel)}
 
 ${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
 ${languageInstruction ? `Language: ${languageInstruction}` : ""}
@@ -32,7 +33,7 @@ Generate a comprehensive Threat Intelligence Advisory formatted in clean Markdow
 Write high-quality, professional security advisory content. Do NOT wrap output in JSON, return direct Markdown.
 `;
 
-  return askClaude(prompt, 2048);
+  return askClaude(prompt, getMaxTokens(config.detailLevel));
 };
 
-module.exports = { threatIntelGenerator };
+module.exports = { threatIntelGenerator };

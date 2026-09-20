@@ -1,6 +1,14 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
 const { getLanguageInstruction } = require("./languageInstruction");
+const { getMaxTokens, getDepthInstruction } = require("./tokenBudget");
+
+const wordRule = (detailLevel) => {
+  const level = (detailLevel || "standard").toLowerCase();
+  if (level === "brief") return "Maximum 120 words.";
+  if (level === "detailed") return "Write 400-600 words covering context, impact, and recommended decisions.";
+  return "Maximum 200 words.";
+};
 
 const execSummaryGenerator = async ({ context, config }) => {
     const domainGuidance = getDomainGuidance(context.sourceCategory);
@@ -16,19 +24,20 @@ Intent: ${context.intent}
 
 Tone: ${config.tone || "professional"}
 Audience: ${config.audience || "executives and decision-makers"}
+${getDepthInstruction(config.detailLevel)}
 
 ${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
 ${languageInstruction ? `Language: ${languageInstruction}` : ""}
 
 Rules:
-- Maximum 200 words.
+- ${wordRule(config.detailLevel)}
 - No fluff — lead with the most important takeaway.
 - End with a one-line "Bottom line" statement.
 
 Write ONLY the executive summary, ready to share.
 `;
 
-    return askClaude(prompt, 600);
+    return askClaude(prompt, getMaxTokens(config.detailLevel));
 };
 
-module.exports = { execSummaryGenerator };
+module.exports = { execSummaryGenerator };

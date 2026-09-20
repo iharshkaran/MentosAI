@@ -1,6 +1,7 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
 const { getLanguageInstruction } = require("./languageInstruction");
+const { getMaxTokens, getDepthInstruction } = require("./tokenBudget");
 
 const contractAuditGenerator = async ({ context, config }) => {
   const domainGuidance = getDomainGuidance(context.sourceCategory);
@@ -14,7 +15,7 @@ Key Issues / Findings: ${context.keyPoints.join("; ")}
 Entities / Contract References: ${context.entities.join(", ")}
 Risk Severity: ${context.riskSeverity || "High"}
 
-Detail Level: ${config.detailLevel || "standard"}
+${getDepthInstruction(config.detailLevel)}
 
 ${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
 ${languageInstruction ? `Language: ${languageInstruction}` : ""}
@@ -39,7 +40,7 @@ Analyze the content and respond ONLY with valid JSON in this exact structure, no
 }
 `;
 
-  return askClaude(prompt, 2048);
+  return askClaude(prompt, getMaxTokens(config.detailLevel));
 };
 
-module.exports = { contractAuditGenerator };
+module.exports = { contractAuditGenerator };

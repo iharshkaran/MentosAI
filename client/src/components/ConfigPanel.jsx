@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings2, Users, AlignLeft, Globe2 } from "lucide-react";
+import { Settings2, Users, AlignLeft, Globe2, Clapperboard } from "lucide-react";
 
 // Language Data
 const LANGUAGES = [
@@ -107,6 +107,22 @@ const ConfigPanel = ({ config, setConfig }) => {
           {LANGUAGES.map((l) => (
             <option key={l.code} value={l.code}>{l.label}</option>
           ))}
+        </select>
+      </div>
+
+      {/* Video Target Duration */}
+      <div className="group md:col-span-2">
+        <label className={labelClasses}>
+          <Clapperboard size={14} className="text-zinc-400" /> Video Target Duration
+        </label>
+        <select
+          value={config.targetDuration || "60-90s"}
+          onChange={(e) => update("targetDuration", e.target.value)}
+          className={`${inputClasses} appearance-none cursor-pointer`}
+        >
+          <option value="30s">30s</option>
+          <option value="60-90s">1-2 min</option>
+          <option value="3-5 min">3-5 min</option>
         </select>
       </div>
 

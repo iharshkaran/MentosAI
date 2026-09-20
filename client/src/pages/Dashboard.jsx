@@ -22,6 +22,7 @@ const Dashboard = () => {
         audience: "",
         language: "en",
         detailLevel: "standard",
+        targetDuration: "60-90s",
     });
 
     const [isPinned, setIsPinned] = useState(false);
@@ -36,7 +37,8 @@ const Dashboard = () => {
         return cached ? JSON.parse(cached) : null;
     });
 
-    const { generate, loading, result: apiResult, error } = useGenerate();
+    const { generate, loading, result: apiResult, error, clarification } = useGenerate();
+    const [clarificationAnswer, setClarificationAnswer] = useState("");
 
     // 2. Clear result logic
     const result = historyJob || apiResult || savedResult;
@@ -67,17 +69,42 @@ const Dashboard = () => {
         return "text";
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = (extra = {}) => {
         if (outputTypes.length === 0) {
             alert("Select at least one output type to generate.");
             return;
         }
-        if (!file && !text?.trim()) {
+        if (!file && !text?.trim() && !extra.jobId) {
             alert("Please provide some source content, upload a file, or paste a link.");
             return;
         }
+        if (!extra.jobId) {
+            setSavedResult(null);
+            setHistoryJob(null);
+            sessionStorage.removeItem("mentos_last_result");
+        }
         const sourceType = detectSourceType(file, text);
-        generate({ file, sourceType, rawText: text, outputTypes, config });
+        generate({ file, sourceType, rawText: text, outputTypes, config, ...extra });
+    };
+
+    const handleAnswerClarification = () => {
+        if (!clarificationAnswer.trim()) {
+            alert("Enter a short answer, or proceed with available context.");
+            return;
+        }
+        handleSubmit({
+            jobId: clarification.jobId,
+            clarificationAnswers: clarificationAnswer.trim(),
+        });
+        setClarificationAnswer("");
+    };
+
+    const handleProceedAnyway = () => {
+        handleSubmit({
+            jobId: clarification.jobId,
+            overrideClarification: true,
+        });
+        setClarificationAnswer("");
     };
 
     const handleNewDocument = () => {
@@ -87,6 +114,7 @@ const Dashboard = () => {
         setHistoryJob(null);
         setCurrentJobId(null);
         sessionStorage.removeItem("mentos_last_result");
+        setClarificationAnswer("");
     };
 
     const handleSelectJob = async (job) => {
@@ -218,6 +246,9 @@ const Dashboard = () => {
                                 ) : (
                                     <PreviewPanel
                                         outputs={result.outputs}
+                                        context={result.context}
+                                        blockchainProof={result.blockchainProof}
+                                        jobId={result._id}
                                         onClose={handleNewDocument}
                                     />
                                 )}
@@ -227,6 +258,43 @@ const Dashboard = () => {
                     </div>
                 </div>
             </main>
+
+            {clarification && !loading && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-900/40 backdrop-blur-sm px-4">
+                    <div className="w-full max-w-lg bg-white rounded-3xl border border-zinc-200 shadow-2xl p-6">
+                        <p className="text-[11px] font-semibold uppercase tracking-wider text-teal-700 mb-2">
+                            Clarification needed
+                        </p>
+                        <h2 className="text-xl font-serif text-zinc-900 mb-2">Need a bit more context</h2>
+                        <p className="text-sm text-zinc-600 leading-relaxed mb-4">
+                            {clarification.clarificationQuestion}
+                        </p>
+                        <textarea
+                            value={clarificationAnswer}
+                            onChange={(e) => setClarificationAnswer(e.target.value)}
+                            rows={4}
+                            placeholder="Type your answer here…"
+                            className="w-full bg-zinc-50 border border-zinc-200 rounded-xl p-3 text-sm text-zinc-800 focus:outline-none focus:ring-2 focus:ring-teal-500/20 focus:border-teal-500/50 mb-4"
+                        />
+                        <div className="flex flex-col sm:flex-row gap-2">
+                            <button
+                                type="button"
+                                onClick={handleAnswerClarification}
+                                className="flex-1 bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2.5 rounded-xl text-sm font-medium"
+                            >
+                                Submit Answer
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleProceedAnyway}
+                                className="flex-1 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-4 py-2.5 rounded-xl text-sm font-medium"
+                            >
+                                Proceed with Available Context
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

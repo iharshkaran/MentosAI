@@ -1,6 +1,7 @@
 const { askClaude } = require("../../services/llm.service");
 const { getDomainGuidance } = require("./domainTone");
 const { getLanguageInstruction } = require("./languageInstruction");
+const { getMaxTokens, getDepthInstruction } = require("./tokenBudget");
 
 const advisoryGenerator = async ({ context, config }) => {
     const domainGuidance = getDomainGuidance(context.sourceCategory);
@@ -12,10 +13,12 @@ Write a structured advisory document based on the following content.
 Summary: ${context.summary}
 Key points: ${context.keyPoints.join(", ")}
 Domain: ${context.domain}
+CVE IDs: ${(context.cveIds || []).join(", ") || "None"}
+Risk Severity: ${context.riskSeverity || "N/A"}
 
 Tone: ${config.tone || "formal"}
 Audience: ${config.audience || "relevant stakeholders"}
-Detail level: ${config.detailLevel || "standard"}
+${getDepthInstruction(config.detailLevel)}
 
 ${domainGuidance ? `Domain Guidance: ${domainGuidance}` : ""}
 ${languageInstruction ? `Language: ${languageInstruction}` : ""}
@@ -30,7 +33,7 @@ Structure the advisory with these sections:
 Write ONLY the advisory content, ready to publish.
 `;
 
-    return askClaude(prompt, 1200);
+    return askClaude(prompt, getMaxTokens(config.detailLevel));
 };
 
-module.exports = { advisoryGenerator };
+module.exports = { advisoryGenerator };

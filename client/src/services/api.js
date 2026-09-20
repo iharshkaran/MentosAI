@@ -31,4 +31,9 @@ export const getJobById = async (id, getToken) => {
   return response.data;
 };
 
+export const verifyLedgerJob = async (jobId) => {
+  const response = await api.get(`/api/ledger/verify/${jobId}`);
+  return response.data;
+};
+
 export default api;

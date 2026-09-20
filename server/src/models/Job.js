@@ -18,6 +18,7 @@ const configSchema = new mongoose.Schema(
         audience: { type: String },
         language: { type: String, default: "en" },
         detailLevel: { type: String, enum: ["brief", "standard", "detailed"], default: "standard" },
+        targetDuration: { type: String, enum: ["30s", "60-90s", "3-5 min"], default: "60-90s" },
         objective: { type: String },
     },
     { _id: false }
@@ -38,6 +39,32 @@ const contextSchema = new mongoose.Schema(
             enum: ["Critical", "High", "Medium", "Low", "N/A"],
             default: "N/A"
         },
+        needsClarification: { type: Boolean, default: false },
+        clarificationQuestion: { type: String },
+    },
+    { _id: false }
+);
+
+const blockchainProofSchema = new mongoose.Schema(
+    {
+        blockIndex: { type: Number },
+        blockHash: { type: String },
+        previousHash: { type: String },
+        merkleRoot: { type: String },
+        sealedAt: { type: Date },
+        verified: { type: Boolean, default: false },
+    },
+    { _id: false }
+);
+
+const clarificationSchema = new mongoose.Schema(
+    {
+        needed: { type: Boolean, default: false },
+        question: { type: String },
+        answers: { type: String },
+        proceededWithAvailableContext: { type: Boolean, default: false },
+        askedAt: { type: Date },
+        answeredAt: { type: Date },
     },
     { _id: false }
 );
@@ -83,11 +110,14 @@ const jobSchema = new mongoose.Schema(
         config: configSchema,
         status: {
             type: String,
-            enum: ["pending", "processing", "completed", "failed"],
+            enum: ["pending", "processing", "clarification_needed", "completed", "failed"],
             default: "pending",
         },
         context: contextSchema,
         outputs: [outputSchema],
+        blockchainProof: blockchainProofSchema,
+        clarification: clarificationSchema,
+        processedSourceText: { type: String, select: false },
     },
     { timestamps: true }
 );
