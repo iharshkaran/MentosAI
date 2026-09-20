@@ -1,4 +1,4 @@
-import { X, CheckCircle2, AlertTriangle, XCircle, Clock, BarChart3, Zap, Activity, ShieldCheck } from "lucide-react";
+import { X, CheckCircle2, AlertTriangle, XCircle, BarChart3, Zap, Activity, ShieldCheck } from "lucide-react";
 
 const LABELS = {
     linkedin: "LinkedIn Post",

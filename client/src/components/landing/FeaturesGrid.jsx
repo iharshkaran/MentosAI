@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { ShieldCheck, Zap, Database, Lock, Terminal, Cpu } from "lucide-react";
+import { ShieldCheck, Zap, Database, Lock } from "lucide-react";
 
 const FeaturesGrid = () => {
     const features = [

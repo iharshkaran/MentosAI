@@ -4,18 +4,12 @@ import { UserButton, useUser, useAuth } from "@clerk/clerk-react";
 import {
     Plus,
     LayoutDashboard,
-    CheckSquare,
-    Calendar,
     Settings,
     ChevronLeft,
     ChevronRight,
     HelpCircle,
-    LogOut,
     Sparkles,
     Home,
-    Layers,
-    FileText,
-    ExternalLink
 } from "lucide-react";
 import { getJobs } from "../services/api";
 
@@ -106,7 +100,7 @@ const NavItem = ({ to, onClick, icon: Icon, label, collapsed, active, badge }) =
 
 const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobId, refreshTrigger }) => {
     const [jobs, setJobs] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
     const { getToken } = useAuth();
     const { user } = useUser();
     const location = useLocation();
@@ -114,7 +108,6 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobI
     const collapsed = !isPinned;
 
     useEffect(() => {
-        setLoading(true);
         getJobs(getToken)
             .then((data) => setJobs(data || []))
             .catch(() => {})

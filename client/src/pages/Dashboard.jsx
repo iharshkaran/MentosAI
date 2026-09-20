@@ -47,7 +47,6 @@ const Dashboard = () => {
     // 3. Sync API Result with SessionStorage
     useEffect(() => {
         if (apiResult) {
-            setSavedResult(apiResult);
             sessionStorage.setItem("mentos_last_result", JSON.stringify(apiResult));
         }
     }, [apiResult]);
@@ -79,6 +78,7 @@ const Dashboard = () => {
             return;
         }
         if (!extra.jobId) {
+            setElapsed(0);
             setSavedResult(null);
             setHistoryJob(null);
             sessionStorage.removeItem("mentos_last_result");
@@ -122,7 +122,7 @@ const Dashboard = () => {
             let fullJob;
             try {
                 fullJob = await openJobSecurely(job._id);
-            } catch (verifErr) {
+            } catch {
                 // If reverification fails or isn't enabled in Clerk project, fallback to authenticated fetch
                 fullJob = await getJobById(job._id, getToken);
             }
@@ -136,10 +136,7 @@ const Dashboard = () => {
 
 
     useEffect(() => {
-        if (!loading) {
-            setElapsed(0);
-            return;
-        }
+        if (!loading) return undefined;
         const start = Date.now();
         const interval = setInterval(() => {
             setElapsed(((Date.now() - start) / 1000).toFixed(1));
@@ -248,6 +245,7 @@ const Dashboard = () => {
                                         outputs={result.outputs}
                                         context={result.context}
                                         blockchainProof={result.blockchainProof}
+                                        getToken={getToken}
                                         jobId={result._id}
                                         onClose={handleNewDocument}
                                     />

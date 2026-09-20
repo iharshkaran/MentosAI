@@ -1,4 +1,5 @@
 const crypto = require("crypto");
+const LedgerBlock = require("../models/LedgerBlock");
 
 /**
  * Node.js Native Cryptographic Blockchain Audit Ledger
@@ -27,7 +28,7 @@ class CryptographicBlockchainLedger {
       validatorScore: 100,
       cveReferences: [],
       domain: "genesis",
-      operatorId: "SYSTEM_INITIALIZER",
+      userId: "SYSTEM_INITIALIZER",
       merkleRoot: "0000000000000000000000000000000000000000000000000000000000000000",
     };
 
@@ -45,7 +46,8 @@ class CryptographicBlockchainLedger {
       block.outputsHash,
       block.validatorScore,
       (block.cveReferences || []).sort().join(","),
-      block.operatorId,
+      block.domain,
+      block.userId,
       block.merkleRoot,
     ].join("|");
 
@@ -55,7 +57,7 @@ class CryptographicBlockchainLedger {
   /**
    * Cryptographically seals an intelligence transformation job into the ledger
    */
-  sealJob({ jobId, sourceText = "", outputs = [], context = {}, operatorId = "anonymous" }) {
+  sealJob({ jobId, sourceText = "", outputs = [], context = {}, userId = "anonymous" }) {
     const previousBlock = this.chain[this.chain.length - 1];
 
     const sourceHash = sha256(sourceText);
@@ -80,7 +82,7 @@ class CryptographicBlockchainLedger {
       validatorScore: avgValidatorScore,
       cveReferences: context.cveIds || [],
       domain: context.domain || "cybersecurity",
-      operatorId,
+      userId,
       merkleRoot,
     };
 
@@ -97,6 +99,21 @@ class CryptographicBlockchainLedger {
       verified: true,
       chainLength: this.chain.length,
     };
+  }
+
+  async initialize() {
+    const persistedBlocks = await LedgerBlock.find().sort({ index: 1 }).lean();
+    if (persistedBlocks.length > 0) {
+      this.chain = persistedBlocks.map(({ _id, ...block }) => block);
+      return;
+    }
+
+    await LedgerBlock.create(this.chain[0]);
+  }
+
+  async persistBlock() {
+    const block = this.chain[this.chain.length - 1];
+    await LedgerBlock.create(block);
   }
 
   /**
@@ -163,14 +180,23 @@ class CryptographicBlockchainLedger {
 
     const block = this.chain[blockIndex];
 
-    // 1. Verify block internal hash
-    const recomputedHash = this.computeBlockHash(block);
-    if (recomputedHash !== block.blockHash) {
-      return {
-        verified: false,
-        tampered: true,
-        error: "Block payload has been tampered with; hash mismatch detected!",
-      };
+    // 1. Verify every earlier block and its predecessor link, not only the target block.
+    for (let index = 0; index <= blockIndex; index += 1) {
+      const candidate = this.chain[index];
+      if (this.computeBlockHash(candidate) !== candidate.blockHash) {
+        return {
+          verified: false,
+          tampered: true,
+          error: `Block ${index} payload has been tampered with; hash mismatch detected!`,
+        };
+      }
+      if (index > 0 && candidate.previousHash !== this.chain[index - 1].blockHash) {
+        return {
+          verified: false,
+          tampered: true,
+          error: `Blockchain linkage broken before block ${index}!`,
+        };
+      }
     }
 
     // 2. If expectedBlockHash provided, verify match
@@ -182,18 +208,6 @@ class CryptographicBlockchainLedger {
       };
     }
 
-    // 3. Verify previous hash chain linkage
-    if (blockIndex > 0) {
-      const prevBlock = this.chain[blockIndex - 1];
-      if (block.previousHash !== prevBlock.blockHash) {
-        return {
-          verified: false,
-          tampered: true,
-          error: "Blockchain linkage broken; previous hash does not match predecessor!",
-        };
-      }
-    }
-
     return {
       verified: true,
       block,
@@ -202,12 +216,15 @@ class CryptographicBlockchainLedger {
     };
   }
 
-  getLatestBlocks(limit = 10) {
-    return this.chain.slice(-limit).reverse();
+  getLatestBlocks(limit = 10, userId) {
+    const visibleBlocks = userId
+      ? this.chain.filter((block) => block.userId === userId)
+      : this.chain;
+    return visibleBlocks.slice(-limit).reverse();
   }
 }
 
 // Singleton instance
 const blockchainLedger = new CryptographicBlockchainLedger();
 
-module.exports = { blockchainLedger, sha256 };
+module.exports = { CryptographicBlockchainLedger, blockchainLedger, sha256 };

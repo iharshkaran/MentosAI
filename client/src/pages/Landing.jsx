@@ -1,4 +1,3 @@
-import React from 'react';
 import Navbar from '../components/landing/Navbar';
 import LivePlayground from '../components/landing/LivePlayground';
 import Hero from '../components/landing/Hero';

@@ -31,8 +31,11 @@ export const getJobById = async (id, getToken) => {
   return response.data;
 };
 
-export const verifyLedgerJob = async (jobId) => {
-  const response = await api.get(`/api/ledger/verify/${jobId}`);
+export const verifyLedgerJob = async (jobId, getToken) => {
+  const token = await getToken();
+  const response = await api.get(`/api/ledger/verify/${jobId}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
   return response.data;
 };
 

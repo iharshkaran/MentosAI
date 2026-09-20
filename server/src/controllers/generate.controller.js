@@ -171,8 +171,9 @@ const generateContent = asyncHandler(async (req, res) => {
             sourceText: cleanText,
             outputs: finalOutputs,
             context,
-            operatorId: userId,
+            userId,
         });
+        await blockchainLedger.persistBlock();
 
         job.outputs = finalOutputs;
         job.blockchainProof = {

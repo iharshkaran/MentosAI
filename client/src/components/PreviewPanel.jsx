@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState } from "react";
 import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText, Fingerprint, Link2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import SlidePreview from "./SlidePreview";
-import StoryboardPreview from "./StoryboardPreview";
-import ContractAuditPreview from "./ContractAuditPreview";
-import StatsModal from "./StatsModal";
+const SlidePreview = lazy(() => import("./SlidePreview"));
+const StoryboardPreview = lazy(() => import("./StoryboardPreview"));
+const ContractAuditPreview = lazy(() => import("./ContractAuditPreview"));
+const StatsModal = lazy(() => import("./StatsModal"));
 import { verifyLedgerJob } from "../services/api";
 
 const LABELS = {
@@ -38,17 +38,12 @@ const domainLabel = (domain) => {
     return domain.charAt(0).toUpperCase() + domain.slice(1);
 };
 
-const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainProof, jobId }) => {
+const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainProof, jobId, getToken }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     const [copied, setCopied] = useState(false);
     const [showStats, setShowStats] = useState(false);
     const [verifyState, setVerifyState] = useState(null);
     const [verifying, setVerifying] = useState(false);
-
-    // Jab tab change ho, toh 'copied' state ko reset kar do
-    useEffect(() => {
-        setCopied(false);
-    }, [activeIndex]);
 
     if (!outputs || outputs.length === 0) return null;
 
@@ -71,7 +66,7 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
         if (!jobId) return;
         setVerifying(true);
         try {
-            const data = await verifyLedgerJob(jobId);
+            const data = await verifyLedgerJob(jobId, getToken);
             setVerifyState(data);
         } catch (err) {
             setVerifyState({ verified: false, error: err.response?.data?.error || "Verification failed" });
@@ -205,11 +200,11 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
 
             {/* Modal Render */}
             {showStats && (
-                <StatsModal
+                <Suspense fallback={null}><StatsModal
                     outputs={outputs}
                     generationTimeMs={generationTimeMs}
                     onClose={() => setShowStats(false)}
-                />
+                /></Suspense>
             )}
 
             {/* Content Area */}
@@ -266,11 +261,11 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                                     className="w-full rounded-xl"
                                 />
                             ) : active.type === "presentation" ? (
-                                <SlidePreview rawContent={active.rawContent} />
+                                <Suspense fallback={<p>Loading presentation preview…</p>}><SlidePreview rawContent={active.rawContent} /></Suspense>
                             ) : active.type === "videoPackage" ? (
-                                <StoryboardPreview rawContent={active.rawContent} />
+                                <Suspense fallback={<p>Loading video preview…</p>}><StoryboardPreview rawContent={active.rawContent} /></Suspense>
                             ) : active.type === "contractAudit" ? (
-                                <ContractAuditPreview rawContent={active.rawContent} />
+                                <Suspense fallback={<p>Loading audit preview…</p>}><ContractAuditPreview rawContent={active.rawContent} /></Suspense>
                             ) : (
                                 <div className="prose-content text-sm md:text-[15px] text-zinc-700 leading-relaxed">
                                     <ReactMarkdown>{active.rawContent || "No content generated. Check the download file if available."}</ReactMarkdown>

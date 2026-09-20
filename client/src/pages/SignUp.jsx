@@ -1,5 +1,5 @@
 import { SignUp } from "@clerk/clerk-react";
-import { Hexagon, ShieldAlert } from "lucide-react";
+import { Hexagon } from "lucide-react";
 
 const SignUpPage = () => {
     return (

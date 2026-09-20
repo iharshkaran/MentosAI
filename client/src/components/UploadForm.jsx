@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { UploadCloud, FileText, X, File } from "lucide-react";
+import { UploadCloud, X, File } from "lucide-react";
 
 const SOURCE_TYPE_MAP = {
     "application/pdf": "pdf",
@@ -9,7 +9,7 @@ const SOURCE_TYPE_MAP = {
     "image/png": "image",
 };
 
-const UploadForm = ({ onFileSelect, sourceType, setSourceType, rawText, setRawText }) => {
+const UploadForm = ({ onFileSelect, setSourceType, rawText, setRawText }) => {
     const [file, setFile] = useState(null);
 
     const onDrop = useCallback(

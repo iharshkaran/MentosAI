@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Terminal, ShieldAlert, FileText, CheckCircle2, Cpu } from "lucide-react";
+import { CheckCircle2, Cpu } from "lucide-react";
 
 const LivePlayground = () => {
     const [activeTab, setActiveTab] = useState("threatIntel");
