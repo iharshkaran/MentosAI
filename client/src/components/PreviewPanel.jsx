@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText, Fingerprint, Link2, Pencil, Save, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 const SlidePreview = lazy(() => import("./SlidePreview"));
@@ -75,10 +75,42 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
     const [instruction, setInstruction] = useState("");
     const [working, setWorking] = useState(false);
     const [contentOverrides, setContentOverrides] = useState({});
+    const [infographicPreview, setInfographicPreview] = useState({ filePath: "", url: "", failed: false });
+
+    const active = outputs?.[activeIndex];
+
+    // Infographic files are protected behind the authenticated download API.
+    // Fetching them as a blob lets us preview the image without exposing a
+    // public file URL or the user's access token in the page address.
+    useEffect(() => {
+        let previewUrl = "";
+        let cancelled = false;
+
+        if (active?.type !== "infographic" || !active.exportedFilePath || !jobId || !getToken) {
+            return undefined;
+        }
+
+        downloadOutput(jobId, active.type, getToken)
+            .then((blob) => {
+                previewUrl = URL.createObjectURL(blob);
+                if (!cancelled) {
+                    setInfographicPreview({ filePath: active.exportedFilePath, url: previewUrl });
+                }
+            })
+            .catch(() => {
+                if (!cancelled) {
+                    setInfographicPreview({ filePath: active.exportedFilePath, url: "", failed: true });
+                }
+            });
+
+        return () => {
+            cancelled = true;
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+        };
+    }, [active?.exportedFilePath, active?.type, getToken, jobId]);
 
     if (!outputs || outputs.length === 0) return null;
 
-    const active = outputs[activeIndex];
     const displayContent = contentOverrides[active?.type] ?? active?.editedContent ?? active?.rawContent;
     const successOutputs = outputs.filter((o) => o.status === "success");
     const passedValidation = successOutputs.filter((o) => o.validation?.passed).length;
@@ -360,9 +392,13 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                                     <div className="flex flex-wrap gap-2"><button disabled={working} onClick={saveEdit} className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white"><Save size={14} /> Save changes</button><button onClick={() => setEditing(false)} className="px-3 py-2 text-sm text-zinc-600">Cancel</button></div>
                                     <div className="border-t border-zinc-100 pt-3"><p className="mb-2 text-xs font-semibold text-zinc-500">EDIT WITH AI</p><div className="flex gap-2"><input value={instruction} onChange={(e) => setInstruction(e.target.value)} placeholder="e.g. Make this concise for CISOs" className="min-w-0 flex-1 rounded-lg border border-zinc-200 px-3 text-sm" /><button disabled={working} onClick={editWithAi} className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-2 text-sm text-white"><Sparkles size={14} /> Revise</button></div></div></div>
                             ) : active.type === "infographic" ? (
-                                <div className="rounded-xl border border-dashed border-zinc-200 p-8 text-center text-sm text-zinc-500">
-                                    Your infographic is ready. Download it securely using the button above.
-                                </div>
+                                infographicPreview.filePath === active.exportedFilePath && infographicPreview.url ? (
+                                    <img src={infographicPreview.url} alt="Generated infographic" className="mx-auto h-auto max-w-full rounded-xl border border-zinc-100 shadow-sm" />
+                                ) : infographicPreview.filePath === active.exportedFilePath && infographicPreview.failed ? (
+                                    <div className="rounded-xl border border-dashed border-zinc-200 p-8 text-center text-sm text-zinc-500">Preview is unavailable, but you can still download it securely above.</div>
+                                ) : (
+                                    <div className="rounded-xl border border-dashed border-zinc-200 p-8 text-center text-sm text-zinc-500">Loading infographic preview… If it does not load, you can still download it securely above.</div>
+                                )
                             ) : active.type === "presentation" ? (
                                 <Suspense fallback={<p>Loading presentation preview…</p>}><SlidePreview rawContent={displayContent} /></Suspense>
                             ) : active.type === "videoPackage" ? (

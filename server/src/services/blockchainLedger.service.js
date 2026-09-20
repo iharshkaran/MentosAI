@@ -14,6 +14,9 @@ const sha256 = (data) => {
 class CryptographicBlockchainLedger {
   constructor() {
     this.chain = [];
+    // Keep writes in order inside this Node process. MongoDB is still the
+    // source of truth, so we also refresh before every seal.
+    this.writeQueue = Promise.resolve();
     this.initializeGenesisBlock();
   }
 
@@ -122,12 +125,63 @@ class CryptographicBlockchainLedger {
       return;
     }
 
-    await LedgerBlock.create(this.chain[0]);
+    // A developer may clear MongoDB while this server is still running. In
+    // that case, the in-memory chain is stale and must not be used to create
+    // the first block of the new ledger.
+    this.chain = [];
+    this.initializeGenesisBlock();
+
+    try {
+      await LedgerBlock.create(this.chain[0]);
+    } catch (error) {
+      // Another request/process may have created the genesis block between
+      // the read above and this insert. Reload it instead of failing.
+      if (error?.code !== 11000) throw error;
+      const blocks = await LedgerBlock.find().sort({ index: 1 }).lean();
+      this.chain = blocks.map(({ _id, ...block }) => block);
+    }
   }
 
   async persistBlock() {
     const block = this.chain[this.chain.length - 1];
     await LedgerBlock.create(block);
+  }
+
+  /**
+   * Creates and saves a block as one operation.
+   *
+   * Reloading from MongoDB prevents a restarted server (or a previously
+   * failed request) from reusing an old in-memory block number. A duplicate
+   * index is retried after a fresh reload to also handle overlapping requests.
+   */
+  async sealAndPersistJob(jobData) {
+    const work = async () => {
+      let lastError;
+
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        await this.initialize();
+        const proof = this.sealJob(jobData);
+        const block = this.chain[this.chain.length - 1];
+
+        try {
+          await LedgerBlock.create(block);
+          return proof;
+        } catch (error) {
+          lastError = error;
+          // Discard the unsaved local block. The next attempt reloads the
+          // canonical chain and receives the next available index.
+          this.chain.pop();
+          if (error?.code !== 11000) throw error;
+        }
+      }
+
+      throw lastError;
+    };
+
+    const result = this.writeQueue.then(work, work);
+    // Do not leave the queue permanently rejected after one failed job.
+    this.writeQueue = result.catch(() => undefined);
+    return result;
   }
 
   /**

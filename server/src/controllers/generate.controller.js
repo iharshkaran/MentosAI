@@ -166,14 +166,13 @@ const generateContent = asyncHandler(async (req, res) => {
             })
         );
 
-        const proof = blockchainLedger.sealJob({
+        const proof = await blockchainLedger.sealAndPersistJob({
             jobId: job._id,
             sourceText: cleanText,
             outputs: finalOutputs,
             context,
             userId,
         });
-        await blockchainLedger.persistBlock();
 
         job.outputs = finalOutputs;
         job.sourceHash = proof.sourceHash;
