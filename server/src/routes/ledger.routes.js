@@ -1,6 +1,6 @@
 const express = require("express");
 const { requireAuthApi } = require("../middlewares/auth.middleware");
-const { blockchainLedger } = require("../services/blockchainLedger.service");
+const { blockchainLedger, sha256 } = require("../services/blockchainLedger.service");
 const Job = require("../models/Job");
 
 const router = express.Router();
@@ -9,7 +9,9 @@ const router = express.Router();
 router.get("/ledger/verify/:jobId", requireAuthApi, async (req, res) => {
   try {
     const { jobId } = req.params;
-    const job = await Job.findOne({ _id: jobId, userId: req.userId }).lean();
+    const job = await Job.findOne({ _id: jobId, userId: req.userId })
+      .select("+sourceHash +processedSourceText")
+      .lean();
 
     if (!job) {
       return res.status(404).json({ verified: false, error: "Job record not found" });
@@ -19,6 +21,21 @@ router.get("/ledger/verify/:jobId", requireAuthApi, async (req, res) => {
       jobId,
       job.blockchainProof?.blockHash || null
     );
+
+    if (verification.verified) {
+      const currentOutputsHash = sha256(job.outputs.map((output) => ({ type: output.type, content: output.rawContent })));
+      if (currentOutputsHash !== verification.block.outputsHash) {
+        verification.verified = false;
+        verification.tampered = true;
+        verification.error = "Generated output no longer matches its sealed hash.";
+      } else if (!job.processedSourceText) {
+        verification.sourceVerification = "unavailable_for_legacy_job";
+      } else if (sha256(job.processedSourceText) !== verification.block.sourceHash) {
+        verification.verified = false;
+        verification.tampered = true;
+        verification.error = "Original source no longer matches its sealed hash.";
+      }
+    }
 
     // Jobs created before persistent ledger support retained only an in-memory block.
     // They cannot be truthfully verified after a server restart.

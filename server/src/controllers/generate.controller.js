@@ -176,6 +176,7 @@ const generateContent = asyncHandler(async (req, res) => {
         await blockchainLedger.persistBlock();
 
         job.outputs = finalOutputs;
+        job.sourceHash = proof.sourceHash;
         job.blockchainProof = {
             blockIndex: proof.blockIndex,
             blockHash: proof.blockHash,
@@ -184,7 +185,8 @@ const generateContent = asyncHandler(async (req, res) => {
             sealedAt: proof.sealedAt,
             verified: true,
         };
-        job.processedSourceText = undefined;
+        // Retained privately so the original source hash can be independently verified later.
+        job.processedSourceText = cleanText;
         job.status = "completed";
         await job.save();
 

@@ -5,6 +5,7 @@ import {
     Plus,
     LayoutDashboard,
     Settings,
+    History,
     ChevronLeft,
     ChevronRight,
     HelpCircle,
@@ -180,6 +181,13 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobI
                     collapsed={collapsed}
                     active={location.pathname === "/"}
                 />
+                <NavItem
+                    to="/history"
+                    icon={History}
+                    label="History"
+                    collapsed={collapsed}
+                    active={location.pathname === "/history"}
+                />
             </nav>
 
             {/* Generations / Boards Header */}
@@ -249,10 +257,11 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobI
             <SectionLabel collapsed={collapsed}>General</SectionLabel>
             <nav className="space-y-1 px-3 shrink-0">
                 <NavItem
-                    to="/"
+                    to="/settings"
                     icon={Settings}
                     label="Settings"
                     collapsed={collapsed}
+                    active={location.pathname === "/settings"}
                 />
                 <button
                     type="button"

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { useAuth, useReverification } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
 import ConsoleInput from "../components/ConsoleInput";
 import OutputChips from "../components/OutputChips";
@@ -9,7 +10,6 @@ import QuickPrompts from "../components/QuickPrompts";
 import PoweredByRow from "../components/PoweredByRow";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useGenerate } from "../hooks/useGenerate";
-import { getJobById } from "../services/api";
 import { getSettings, updateSettings } from "../services/api";
 import OnboardingModal from "../components/OnboardingModal";
 
@@ -29,9 +29,7 @@ const Dashboard = () => {
 
     const [isPinned, setIsPinned] = useState(false);
     const { getToken } = useAuth();
-    const [currentJobId, setCurrentJobId] = useState(null);
-    const [historyJob, setHistoryJob] = useState(null);
-    const openJobSecurely = useReverification((id) => getJobById(id, getToken));
+    const navigate = useNavigate();
 
     // 1. Reload par saved output recover karne ke liye initial state
     const [savedResult, setSavedResult] = useState(() => {
@@ -57,7 +55,7 @@ const Dashboard = () => {
     };
 
     // 2. Clear result logic
-    const result = historyJob || apiResult || savedResult;
+    const result = apiResult || savedResult;
     const started = loading || !!result;
 
     // 3. Sync API Result with SessionStorage
@@ -84,7 +82,7 @@ const Dashboard = () => {
         return "text";
     };
 
-    const handleSubmit = (extra = {}) => {
+    const handleSubmit = async (extra = {}) => {
         if (outputTypes.length === 0) {
             alert("Select at least one output type to generate.");
             return;
@@ -96,11 +94,11 @@ const Dashboard = () => {
         if (!extra.jobId) {
             setElapsed(0);
             setSavedResult(null);
-            setHistoryJob(null);
             sessionStorage.removeItem("mentos_last_result");
         }
         const sourceType = detectSourceType(file, text);
-        generate({ file, sourceType, rawText: text, outputTypes, config, ...extra });
+        const generated = await generate({ file, sourceType, rawText: text, outputTypes, config, ...extra });
+        if (generated?._id) navigate(`/c/${generated._id}`);
     };
 
     const handleAnswerClarification = () => {
@@ -127,28 +125,11 @@ const Dashboard = () => {
         setFile(null);
         setText("");
         setSavedResult(null);
-        setHistoryJob(null);
-        setCurrentJobId(null);
         sessionStorage.removeItem("mentos_last_result");
         setClarificationAnswer("");
     };
 
-    const handleSelectJob = async (job) => {
-        try {
-            let fullJob;
-            try {
-                fullJob = await openJobSecurely(job._id);
-            } catch {
-                // If reverification fails or isn't enabled in Clerk project, fallback to authenticated fetch
-                fullJob = await getJobById(job._id, getToken);
-            }
-            setHistoryJob(fullJob);
-            setCurrentJobId(job._id);
-        } catch (err) {
-            console.error("Failed to load job:", err);
-            alert("Could not load job details.");
-        }
-    };
+    const handleSelectJob = (job) => navigate(`/c/${job._id}`);
 
 
     useEffect(() => {
@@ -186,7 +167,7 @@ const Dashboard = () => {
                 setIsPinned={setIsPinned}
                 onNewDocument={handleNewDocument}
                 onSelectJob={handleSelectJob}
-                activeJobId={currentJobId}
+                activeJobId={result?._id}
                 refreshTrigger={result?._id}
             />
 

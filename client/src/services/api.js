@@ -63,4 +63,13 @@ export const reviseOutput = async (jobId, type, instruction, getToken) => {
   return response.data.output;
 };
 
+export const downloadOutput = async (jobId, type, getToken) => {
+  const token = await getToken();
+  const response = await api.get(`/api/jobs/${jobId}/outputs/${type}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: "blob",
+  });
+  return response.data;
+};
+
 export default api;

@@ -12,6 +12,7 @@ const userSettingsSchema = new mongoose.Schema({
     tone: { type: String, default: "professional" },
     language: { type: String, default: "en" },
     detailLevel: { type: String, default: "standard" },
+    targetDuration: { type: String, enum: ["30s", "60-90s", "3-5 min"], default: "60-90s" },
     strictSourceGrounding: { type: Boolean, default: true },
   },
 }, { timestamps: true });

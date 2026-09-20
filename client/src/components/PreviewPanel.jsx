@@ -1,11 +1,11 @@
-import { lazy, Suspense, useState, useEffect } from "react";
+import { lazy, Suspense, useState } from "react";
 import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText, Fingerprint, Link2, Pencil, Save, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 const SlidePreview = lazy(() => import("./SlidePreview"));
 const StoryboardPreview = lazy(() => import("./StoryboardPreview"));
 const ContractAuditPreview = lazy(() => import("./ContractAuditPreview"));
 const StatsModal = lazy(() => import("./StatsModal"));
-import { verifyLedgerJob, saveOutputEdit, reviseOutput } from "../services/api";
+import { verifyLedgerJob, saveOutputEdit, reviseOutput, downloadOutput } from "../services/api";
 
 const LABELS = {
     linkedin: "LinkedIn Post",
@@ -20,8 +20,6 @@ const LABELS = {
     threatIntel: "Threat Intel",
     contractAudit: "Contract Audit",
 };
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
 const severityStyles = {
     Critical: "bg-red-100 text-red-700 border-red-200",
@@ -78,11 +76,6 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
     const [working, setWorking] = useState(false);
     const [contentOverrides, setContentOverrides] = useState({});
 
-    useEffect(() => {
-        setEditing(false);
-        setInstruction("");
-    }, [activeIndex]);
-
     if (!outputs || outputs.length === 0) return null;
 
     const active = outputs[activeIndex];
@@ -106,11 +99,16 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
         setEditing(true); 
     };
 
+    const selectOutput = (index) => {
+        setActiveIndex(index);
+        setEditing(false);
+        setInstruction("");
+    };
+
     const saveEdit = async () => {
         const textToSave = draft;
         // 1. Optimistic update: state updates immediately so UI reflects edits instantly
         setContentOverrides((prev) => ({ ...prev, [active.type]: textToSave }));
-        if (active) active.editedContent = textToSave;
         setEditing(false);
 
         // 2. Persist to server in background
@@ -119,8 +117,6 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
             try {
                 const updated = await saveOutputEdit(jobId, active.type, textToSave, getToken);
                 if (updated?.editedContent) {
-                    active.editedContent = updated.editedContent;
-                    active.versions = updated.versions;
                     setContentOverrides((prev) => ({ ...prev, [active.type]: updated.editedContent }));
                 }
             } catch (err) {
@@ -137,8 +133,6 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
         try {
             const updated = await reviseOutput(jobId, active.type, instruction, getToken);
             if (updated?.editedContent) {
-                active.editedContent = updated.editedContent;
-                active.versions = updated.versions;
                 setContentOverrides((prev) => ({ ...prev, [active.type]: updated.editedContent }));
                 setDraft(updated.editedContent);
                 setInstruction("");
@@ -164,6 +158,21 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
         }
     };
 
+    const handleDownload = async () => {
+        if (!jobId || !active) return;
+        try {
+            const blob = await downloadOutput(jobId, active.type, getToken);
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${active.type}-mentosai`;
+            link.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            alert("Could not download this output: " + (err.response?.data?.error || err.message));
+        }
+    };
+
     return (
         <div className="h-full flex flex-col bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm relative">
 
@@ -173,7 +182,7 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                     {outputs.map((o, i) => (
                         <button
                             key={i}
-                            onClick={() => setActiveIndex(i)}
+                            onClick={() => selectOutput(i)}
                             type="button"
                             className={`px-4 py-1.5 rounded-lg text-sm whitespace-nowrap font-medium transition-all duration-200 ${i === activeIndex
                                 ? "bg-zinc-900 text-white shadow-md"
@@ -334,12 +343,12 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                                 {/* Download Button */}
                                 {active.exportedFilePath && (
 
-                                    <a href={`${API_BASE}/api/download/${active.exportedFilePath}`}
+                                    <button type="button" onClick={handleDownload}
                                         className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-800 text-white px-4 py-2 rounded-xl text-sm font-medium transition-all shadow-sm active:scale-95"
                                     >
                                         <Download size={15} />
                                         Download File
-                                    </a>
+                                    </button>
                                 )}
                             </div>
                         </div>
@@ -351,11 +360,9 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                                     <div className="flex flex-wrap gap-2"><button disabled={working} onClick={saveEdit} className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white"><Save size={14} /> Save changes</button><button onClick={() => setEditing(false)} className="px-3 py-2 text-sm text-zinc-600">Cancel</button></div>
                                     <div className="border-t border-zinc-100 pt-3"><p className="mb-2 text-xs font-semibold text-zinc-500">EDIT WITH AI</p><div className="flex gap-2"><input value={instruction} onChange={(e) => setInstruction(e.target.value)} placeholder="e.g. Make this concise for CISOs" className="min-w-0 flex-1 rounded-lg border border-zinc-200 px-3 text-sm" /><button disabled={working} onClick={editWithAi} className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-2 text-sm text-white"><Sparkles size={14} /> Revise</button></div></div></div>
                             ) : active.type === "infographic" ? (
-                                <img
-                                    src={`${API_BASE}/outputs/${active.exportedFilePath}`}
-                                    alt="Generated infographic"
-                                    className="w-full rounded-xl"
-                                />
+                                <div className="rounded-xl border border-dashed border-zinc-200 p-8 text-center text-sm text-zinc-500">
+                                    Your infographic is ready. Download it securely using the button above.
+                                </div>
                             ) : active.type === "presentation" ? (
                                 <Suspense fallback={<p>Loading presentation preview…</p>}><SlidePreview rawContent={displayContent} /></Suspense>
                             ) : active.type === "videoPackage" ? (

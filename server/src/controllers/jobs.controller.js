@@ -3,6 +3,7 @@ const { getAuth } = require("@clerk/express");
 const { reverificationErrorResponse } = require("@clerk/shared/authorization-errors");
 const Job = require("../models/Job");
 const { askClaude } = require("../services/llm.service");
+const { formatOutput } = require("../pipeline/formatter");
 
 const findOwnedOutput = async (req) => {
   let job = null;
@@ -55,6 +56,7 @@ const saveOutputEdit = asyncHandler(async (req, res) => {
   if (!job || !output) return res.status(404).json({ error: "Output not found" });
 
   output.editedContent = content;
+  output.exportedFilePath = await formatOutput(output.type, content);
   if (!Array.isArray(output.versions)) {
     output.versions = [];
   }
@@ -86,6 +88,7 @@ CVE IDs: ${(context.cveIds || []).join(", ")}
 Return only the complete revised artifact, ready to use.`, 2048);
 
   output.editedContent = revisedContent;
+  output.exportedFilePath = await formatOutput(output.type, revisedContent);
   if (!Array.isArray(output.versions)) {
     output.versions = [];
   }
@@ -94,4 +97,12 @@ Return only the complete revised artifact, ready to use.`, 2048);
   res.json({ output });
 });
 
-module.exports = { listJobs, getJobById, saveOutputEdit, reviseOutput };
+const downloadOutput = asyncHandler(async (req, res) => {
+  const { job, output } = await findOwnedOutput(req);
+  if (!job || !output?.exportedFilePath) return res.status(404).json({ error: "Download not found" });
+  const path = require("path");
+  const filePath = path.join(__dirname, "../../outputs", path.basename(output.exportedFilePath));
+  return res.download(filePath);
+});
+
+module.exports = { listJobs, getJobById, saveOutputEdit, reviseOutput, downloadOutput };

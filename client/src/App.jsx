@@ -4,7 +4,17 @@ import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import SignInPage from "./pages/SignIn";
 import SignUpPage from "./pages/SignUp";
+import ConversationPage from "./pages/ConversationPage";
+import HistoryPage from "./pages/HistoryPage";
+import SettingsPage from "./pages/SettingsPage";
 import "./index.css";
+
+const Protected = ({ children }) => (
+    <>
+        <SignedIn>{children}</SignedIn>
+        <SignedOut><Navigate to="/sign-in" replace /></SignedOut>
+    </>
+);
 
 function App() {
     return (
@@ -56,6 +66,10 @@ function App() {
                     </>
                 }
             />
+
+            <Route path="/c/:id" element={<Protected><ConversationPage /></Protected>} />
+            <Route path="/history" element={<Protected><HistoryPage /></Protected>} />
+            <Route path="/settings" element={<Protected><SettingsPage /></Protected>} />
 
             {/* Default Catch-all Redirect */}
             <Route

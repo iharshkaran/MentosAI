@@ -123,6 +123,7 @@ const jobSchema = new mongoose.Schema(
         context: contextSchema,
         outputs: [outputSchema],
         blockchainProof: blockchainProofSchema,
+        sourceHash: { type: String, select: false },
         clarification: clarificationSchema,
         processedSourceText: { type: String, select: false },
     },
