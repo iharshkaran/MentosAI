@@ -6,6 +6,7 @@ const generateRoutes = require("./routes/generate.routes");
 const { clerkMiddleware } = require("@clerk/express");
 const jobsRoutes = require("./routes/jobs.routes");
 const ledgerRoutes = require("./routes/ledger.routes");
+const settingsRoutes = require("./routes/settings.routes");
 
 dotenv.config();
 
@@ -39,6 +40,7 @@ app.get("/health", (req, res) => {
 app.use("/api", generateRoutes);
 app.use("/api", jobsRoutes);
 app.use("/api", ledgerRoutes);
+app.use("/api", settingsRoutes);
 
 
 // 404 handler

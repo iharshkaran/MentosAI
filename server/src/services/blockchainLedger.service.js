@@ -20,6 +20,7 @@ class CryptographicBlockchainLedger {
   initializeGenesisBlock() {
     const genesisBlock = {
       index: 0,
+      hashVersion: 2,
       timestamp: new Date("2026-01-01T00:00:00.000Z").toISOString(),
       previousHash: "0000000000000000000000000000000000000000000000000000000000000000",
       jobId: "GENESIS_BLOCK_NTRO_CYBER_VAULT",
@@ -54,6 +55,18 @@ class CryptographicBlockchainLedger {
     return sha256(payload);
   }
 
+  computeLegacyBlockHash(block) {
+    const payload = [block.index, block.timestamp, block.previousHash, block.jobId,
+      block.sourceHash, block.outputsHash, block.validatorScore,
+      (block.cveReferences || []).sort().join(","), block.userId, block.merkleRoot].join("|");
+    return sha256(payload);
+  }
+
+  isBlockHashValid(block) {
+    return this.computeBlockHash(block) === block.blockHash ||
+      (!block.hashVersion && this.computeLegacyBlockHash(block) === block.blockHash);
+  }
+
   /**
    * Cryptographically seals an intelligence transformation job into the ledger
    */
@@ -74,6 +87,7 @@ class CryptographicBlockchainLedger {
 
     const block = {
       index: this.chain.length,
+      hashVersion: 2,
       timestamp: new Date().toISOString(),
       previousHash: previousBlock.blockHash,
       jobId: String(jobId),
@@ -129,9 +143,7 @@ class CryptographicBlockchainLedger {
     }
 
     const block = this.chain[index];
-    const recomputedHash = this.computeBlockHash(block);
-
-    if (recomputedHash !== block.blockHash) {
+    if (!this.isBlockHashValid(block)) {
       return {
         verified: false,
         tampered: true,
@@ -183,7 +195,7 @@ class CryptographicBlockchainLedger {
     // 1. Verify every earlier block and its predecessor link, not only the target block.
     for (let index = 0; index <= blockIndex; index += 1) {
       const candidate = this.chain[index];
-      if (this.computeBlockHash(candidate) !== candidate.blockHash) {
+      if (!this.isBlockHashValid(candidate)) {
         return {
           verified: false,
           tampered: true,

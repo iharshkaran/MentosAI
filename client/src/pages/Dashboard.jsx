@@ -10,6 +10,8 @@ import PoweredByRow from "../components/PoweredByRow";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { useGenerate } from "../hooks/useGenerate";
 import { getJobById } from "../services/api";
+import { getSettings, updateSettings } from "../services/api";
+import OnboardingModal from "../components/OnboardingModal";
 
 
 const Dashboard = () => {
@@ -39,6 +41,20 @@ const Dashboard = () => {
 
     const { generate, loading, result: apiResult, error, clarification } = useGenerate();
     const [clarificationAnswer, setClarificationAnswer] = useState("");
+    const [showOnboarding, setShowOnboarding] = useState(false);
+
+    useEffect(() => {
+        getSettings(getToken).then((settings) => {
+            setShowOnboarding(!settings.onboardingCompleted);
+            setConfig((current) => ({ ...current, ...settings.defaults, audience: settings.profile?.primaryAudience || current.audience }));
+        }).catch(() => {});
+    }, [getToken]);
+
+    const completeOnboarding = async (settings) => {
+        const saved = await updateSettings(settings, getToken);
+        setConfig((current) => ({ ...current, ...saved.defaults, audience: saved.profile?.primaryAudience || current.audience }));
+        setShowOnboarding(false);
+    };
 
     // 2. Clear result logic
     const result = historyJob || apiResult || savedResult;
@@ -293,6 +309,7 @@ const Dashboard = () => {
                     </div>
                 </div>
             )}
+            {showOnboarding && <OnboardingModal onComplete={completeOnboarding} />}
         </div>
     );
 };

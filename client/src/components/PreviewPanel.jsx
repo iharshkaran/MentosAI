@@ -1,11 +1,11 @@
-import { lazy, Suspense, useState } from "react";
-import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText, Fingerprint, Link2 } from "lucide-react";
+import { lazy, Suspense, useState, useEffect } from "react";
+import { AlertTriangle, Download, Clock, ShieldCheck, X, Copy, Check, FileText, Fingerprint, Link2, Pencil, Save, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 const SlidePreview = lazy(() => import("./SlidePreview"));
 const StoryboardPreview = lazy(() => import("./StoryboardPreview"));
 const ContractAuditPreview = lazy(() => import("./ContractAuditPreview"));
 const StatsModal = lazy(() => import("./StatsModal"));
-import { verifyLedgerJob } from "../services/api";
+import { verifyLedgerJob, saveOutputEdit, reviseOutput } from "../services/api";
 
 const LABELS = {
     linkedin: "LinkedIn Post",
@@ -38,16 +38,55 @@ const domainLabel = (domain) => {
     return domain.charAt(0).toUpperCase() + domain.slice(1);
 };
 
+const getIntelligenceHeader = (domain, sourceCategory) => {
+    const d = (domain || "").toLowerCase();
+    const c = (sourceCategory || "").toLowerCase();
+    if (d.includes("cyber") || c.includes("threat") || c.includes("incident") || c.includes("advisory")) {
+        return "Cyber Threat Intelligence";
+    }
+    if (d.includes("block") || c.includes("contract")) {
+        return "Smart Contract & Blockchain Intelligence";
+    }
+    if (c.includes("research") || c.includes("paper")) {
+        return "Research Context & Key Findings";
+    }
+    if (c.includes("news")) {
+        return "News Context & Key Entities";
+    }
+    if (c.includes("policy")) {
+        return "Policy & Regulatory Context";
+    }
+    return "Extracted Context & Key Entities";
+};
+
+const domainBadgeStyle = (domain) => {
+    const d = (domain || "").toLowerCase();
+    if (d.includes("cyber")) return "bg-rose-50 text-rose-800 border-rose-200/70";
+    if (d.includes("block")) return "bg-amber-50 text-amber-800 border-amber-200/70";
+    return "bg-zinc-100 text-zinc-700 border-zinc-200";
+};
+
 const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainProof, jobId, getToken }) => {
     const [activeIndex, setActiveIndex] = useState(0);
     const [copied, setCopied] = useState(false);
     const [showStats, setShowStats] = useState(false);
     const [verifyState, setVerifyState] = useState(null);
     const [verifying, setVerifying] = useState(false);
+    const [editing, setEditing] = useState(false);
+    const [draft, setDraft] = useState("");
+    const [instruction, setInstruction] = useState("");
+    const [working, setWorking] = useState(false);
+    const [contentOverrides, setContentOverrides] = useState({});
+
+    useEffect(() => {
+        setEditing(false);
+        setInstruction("");
+    }, [activeIndex]);
 
     if (!outputs || outputs.length === 0) return null;
 
     const active = outputs[activeIndex];
+    const displayContent = contentOverrides[active?.type] ?? active?.editedContent ?? active?.rawContent;
     const successOutputs = outputs.filter((o) => o.status === "success");
     const passedValidation = successOutputs.filter((o) => o.validation?.passed).length;
     const failedCount = outputs.length - successOutputs.length;
@@ -55,10 +94,60 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
 
     // Copy function
     const handleCopy = () => {
-        if (active.rawContent) {
-            navigator.clipboard.writeText(active.rawContent);
+        if (displayContent) {
+            navigator.clipboard.writeText(displayContent);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const startEditing = () => { 
+        setDraft(displayContent || ""); 
+        setEditing(true); 
+    };
+
+    const saveEdit = async () => {
+        const textToSave = draft;
+        // 1. Optimistic update: state updates immediately so UI reflects edits instantly
+        setContentOverrides((prev) => ({ ...prev, [active.type]: textToSave }));
+        if (active) active.editedContent = textToSave;
+        setEditing(false);
+
+        // 2. Persist to server in background
+        if (jobId && getToken) {
+            setWorking(true);
+            try {
+                const updated = await saveOutputEdit(jobId, active.type, textToSave, getToken);
+                if (updated?.editedContent) {
+                    active.editedContent = updated.editedContent;
+                    active.versions = updated.versions;
+                    setContentOverrides((prev) => ({ ...prev, [active.type]: updated.editedContent }));
+                }
+            } catch (err) {
+                console.warn("Could not sync edit to server, retained locally:", err);
+            } finally {
+                setWorking(false);
+            }
+        }
+    };
+
+    const editWithAi = async () => {
+        if (!instruction.trim()) return;
+        setWorking(true);
+        try {
+            const updated = await reviseOutput(jobId, active.type, instruction, getToken);
+            if (updated?.editedContent) {
+                active.editedContent = updated.editedContent;
+                active.versions = updated.versions;
+                setContentOverrides((prev) => ({ ...prev, [active.type]: updated.editedContent }));
+                setDraft(updated.editedContent);
+                setInstruction("");
+            }
+        } catch (err) {
+            console.error("AI revision failed:", err);
+            alert("Could not revise with AI: " + (err.response?.data?.error || err.message));
+        } finally {
+            setWorking(false);
         }
     };
 
@@ -135,15 +224,17 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                     {context && (
                         <div>
                             <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400 mb-2">
-                                Cyber & Blockchain Intelligence
+                                {getIntelligenceHeader(context.domain, context.sourceCategory)}
                             </p>
                             <div className="flex flex-wrap items-center gap-2">
-                                <span className="px-2.5 py-1 rounded-md text-xs font-medium bg-teal-50 text-teal-800 border border-teal-100">
+                                <span className={`px-2.5 py-1 rounded-md text-xs font-medium border ${domainBadgeStyle(context.domain)}`}>
                                     Domain: {domainLabel(context.domain)}
                                 </span>
-                                <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${severityStyles[context.riskSeverity] || severityStyles["N/A"]}`}>
-                                    Risk: {context.riskSeverity || "N/A"}
-                                </span>
+                                {context.riskSeverity && context.riskSeverity !== "N/A" && (
+                                    <span className={`px-2.5 py-1 rounded-md text-xs font-semibold border ${severityStyles[context.riskSeverity] || severityStyles["N/A"]}`}>
+                                        Risk: {context.riskSeverity}
+                                    </span>
+                                )}
                                 {(context.cveIds || []).slice(0, 6).map((cve) => (
                                     <span key={cve} className="px-2 py-1 rounded-md text-[11px] font-mono bg-white border border-zinc-200 text-zinc-700">
                                         {cve}
@@ -180,8 +271,8 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                                     <ShieldCheck size={12} />
                                     {verifying
                                         ? "Verifying…"
-                                        : verifyState?.verified === false
-                                            ? "Invalid"
+                                            : verifyState?.verified === false
+                                            ? verifyState?.legacyProof ? "Re-seal needed" : "Invalid"
                                             : "Tamper-Proof Verified"}
                                 </span>
                             </div>
@@ -238,6 +329,7 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
                                     {copied ? <Check size={15} className="text-emerald-500" /> : <Copy size={15} />}
                                     {copied ? "Copied!" : "Copy Text"}
                                 </button>
+                                {active.type !== "infographic" && <button onClick={startEditing} className="flex items-center gap-1.5 bg-white border border-zinc-200 hover:bg-zinc-50 text-zinc-700 px-4 py-2 rounded-xl text-sm font-medium"><Pencil size={15} /> Edit</button>}
 
                                 {/* Download Button */}
                                 {active.exportedFilePath && (
@@ -254,21 +346,25 @@ const PreviewPanel = ({ outputs, generationTimeMs, onClose, context, blockchainP
 
                         {/* Rich Text Render Area (Document feel) */}
                         <div className="flex-1 bg-white border border-zinc-200 rounded-2xl p-6 md:p-8 shadow-sm overflow-y-auto custom-scrollbar">
-                            {active.type === "infographic" ? (
+                            {editing ? (
+                                <div className="space-y-3"><textarea value={draft} onChange={(e) => setDraft(e.target.value)} rows={15} className="w-full rounded-xl border border-zinc-200 p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-teal-500/30" />
+                                    <div className="flex flex-wrap gap-2"><button disabled={working} onClick={saveEdit} className="inline-flex items-center gap-1 rounded-lg bg-zinc-900 px-3 py-2 text-sm text-white"><Save size={14} /> Save changes</button><button onClick={() => setEditing(false)} className="px-3 py-2 text-sm text-zinc-600">Cancel</button></div>
+                                    <div className="border-t border-zinc-100 pt-3"><p className="mb-2 text-xs font-semibold text-zinc-500">EDIT WITH AI</p><div className="flex gap-2"><input value={instruction} onChange={(e) => setInstruction(e.target.value)} placeholder="e.g. Make this concise for CISOs" className="min-w-0 flex-1 rounded-lg border border-zinc-200 px-3 text-sm" /><button disabled={working} onClick={editWithAi} className="inline-flex items-center gap-1 rounded-lg bg-teal-600 px-3 py-2 text-sm text-white"><Sparkles size={14} /> Revise</button></div></div></div>
+                            ) : active.type === "infographic" ? (
                                 <img
                                     src={`${API_BASE}/outputs/${active.exportedFilePath}`}
                                     alt="Generated infographic"
                                     className="w-full rounded-xl"
                                 />
                             ) : active.type === "presentation" ? (
-                                <Suspense fallback={<p>Loading presentation preview…</p>}><SlidePreview rawContent={active.rawContent} /></Suspense>
+                                <Suspense fallback={<p>Loading presentation preview…</p>}><SlidePreview rawContent={displayContent} /></Suspense>
                             ) : active.type === "videoPackage" ? (
-                                <Suspense fallback={<p>Loading video preview…</p>}><StoryboardPreview rawContent={active.rawContent} /></Suspense>
+                                <Suspense fallback={<p>Loading video preview…</p>}><StoryboardPreview rawContent={displayContent} /></Suspense>
                             ) : active.type === "contractAudit" ? (
-                                <Suspense fallback={<p>Loading audit preview…</p>}><ContractAuditPreview rawContent={active.rawContent} /></Suspense>
+                                <Suspense fallback={<p>Loading audit preview…</p>}><ContractAuditPreview rawContent={displayContent} /></Suspense>
                             ) : (
                                 <div className="prose-content text-sm md:text-[15px] text-zinc-700 leading-relaxed">
-                                    <ReactMarkdown>{active.rawContent || "No content generated. Check the download file if available."}</ReactMarkdown>
+                                    <ReactMarkdown>{displayContent || "No content generated. Check the download file if available."}</ReactMarkdown>
                                 </div>
                             )}
                         </div>

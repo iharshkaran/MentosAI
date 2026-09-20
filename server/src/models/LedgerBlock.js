@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const ledgerBlockSchema = new mongoose.Schema(
   {
     index: { type: Number, required: true, unique: true },
+    hashVersion: { type: Number, default: 2 },
     timestamp: { type: String, required: true },
     previousHash: { type: String, required: true },
     jobId: { type: String, required: true, unique: true },

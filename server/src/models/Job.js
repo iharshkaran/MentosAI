@@ -83,6 +83,13 @@ const outputSchema = new mongoose.Schema(
     {
         type: { type: String, enum: OUTPUT_TYPES, required: true },
         rawContent: { type: String },
+        editedContent: { type: String },
+        versions: [{
+            content: { type: String, required: true },
+            source: { type: String, enum: ["ai", "user", "ai_revision"], required: true },
+            instruction: { type: String },
+            createdAt: { type: Date, default: Date.now },
+        }],
         validation: validationSchema,
         exportedFilePath: { type: String },
         status: { type: String, enum: ["success", "failed"], required: true },

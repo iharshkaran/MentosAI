@@ -20,6 +20,18 @@ router.get("/ledger/verify/:jobId", requireAuthApi, async (req, res) => {
       job.blockchainProof?.blockHash || null
     );
 
+    // Jobs created before persistent ledger support retained only an in-memory block.
+    // They cannot be truthfully verified after a server restart.
+    if (!verification.verified && job.blockchainProof && verification.error === "Job hash not found in cryptographic blockchain ledger") {
+      return res.status(200).json({
+        jobId,
+        verified: false,
+        legacyProof: true,
+        error: "This job was created before persistent ledger support. Generate it again to create a verifiable seal.",
+        storedProof: job.blockchainProof,
+      });
+    }
+
     res.status(200).json({
       jobId,
       ...verification,
