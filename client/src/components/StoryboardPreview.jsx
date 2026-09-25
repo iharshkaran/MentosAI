@@ -1,8 +1,41 @@
+import ReactMarkdown from "react-markdown";
+
 const parseJson = (raw) => {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+
   try {
-    const cleaned = raw.replace(/```json|```/g, "").trim();
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    return JSON.parse(match ? match[0] : cleaned);
+    // Models sometimes wrap JSON in a fenced block (with varying casing) or
+    // add a short introduction. Prefer the fenced payload when one is present.
+    const fenced = raw.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    const cleaned = (fenced?.[1] || raw).trim();
+
+    try {
+      return JSON.parse(cleaned);
+    } catch {
+      // Find the first complete JSON object while respecting quoted braces.
+      const start = cleaned.indexOf("{");
+      if (start === -1) return null;
+
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let i = start; i < cleaned.length; i += 1) {
+        const char = cleaned[i];
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (char === "\\") escaped = true;
+          else if (char === '"') inString = false;
+          continue;
+        }
+        if (char === '"') inString = true;
+        else if (char === "{") depth += 1;
+        else if (char === "}") {
+          depth -= 1;
+          if (depth === 0) return JSON.parse(cleaned.slice(start, i + 1));
+        }
+      }
+      return null;
+    }
   } catch {
     return null;
   }
@@ -12,7 +45,11 @@ const StoryboardPreview = ({ rawContent }) => {
   const data = parseJson(rawContent);
 
   if (!data) {
-    return <p className="text-sm text-zinc-500">Could not parse video package content.</p>;
+    return (
+      <div className="prose-content text-sm md:text-[15px] text-zinc-700 leading-relaxed">
+        <ReactMarkdown>{rawContent || "No video package content was generated."}</ReactMarkdown>
+      </div>
+    );
   }
 
   return (

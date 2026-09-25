@@ -1,114 +1,136 @@
 # MentosAI
 
-**A secure, personalized AI workspace that transforms one source into many useful formats.**
+**Turn one source into clear, audience-ready security and communication materials.**
 
-Built by Team KALKI for Smart India Hackathon 2026 — Problem Statement SIH26154 (National Technical Research Organisation).
+MentosAI is an AI-assisted content workspace built by Team KALKI for Smart India Hackathon 2026, problem statement **SIH26154 (National Technical Research Organisation)**. It accepts source material, extracts a shared context, generates selected deliverables, checks them against the extracted facts, and keeps each job available for review and editing.
 
-MentosAI accepts reports, documents, images, links, and prompts; extracts grounded context; and creates multiple ready-to-use outputs in parallel. Users can refine an output manually or with AI, retain an auditable history, and verify a cryptographic tamper-evident seal for each generation.
+> AI-generated security content needs human review. Validation is an aid for spotting inconsistencies; it is not a substitute for expert analysis.
 
-## Problem
+## Contents
 
-Teams often need to convert one report, advisory, incident log, article, or research document into several communications. Doing that manually is slow, inconsistent, and requires both domain and writing expertise.
+- [What it does](#what-it-does)
+- [Features](#features)
+- [Supported inputs and outputs](#supported-inputs-and-outputs)
+- [How a generation works](#how-a-generation-works)
+- [Application pages](#application-pages)
+- [Technology and architecture](#technology-and-architecture)
+- [Run locally](#run-locally)
+- [Environment variables](#environment-variables)
+- [API reference](#api-reference)
+- [Project layout](#project-layout)
+- [Security and audit notes](#security-and-audit-notes)
+- [Known limitations](#known-limitations)
 
-MentosAI provides one controlled workflow: upload once, select formats, configure the audience and tone, then review, edit, download, and verify the resulting artifacts.
+## What it does
+
+Teams often need to turn an incident report, advisory, research document, article, or other source into several kinds of material. MentosAI puts that work into one flow: provide source material, select one or more output types, choose generation preferences, then review, edit, export, and revisit the results.
 
 ## Features
 
-- **Multi-source input:** pasted text, URLs, PDFs, Office documents, images, and supported audio/video files.
-- **Nine outputs:** LinkedIn post, X/Twitter thread, advisory, executive summary, presentation, infographic, video package, threat-intelligence brief, and smart-contract audit.
-- **Parallel generation:** requested formats are created from one shared source context.
-- **Context extraction:** summary, intent, key points, entities, CVEs, domain, source category, and risk severity.
-- **Large-document processing:** long material is chunked and summarized before generation.
-- **Grounding checks:** outputs are checked against extracted source facts for possible hallucinations.
-- **Personalized defaults:** role, organisation, audience, tone, language, detail level, and video duration are saved for each user.
-- **Editable outputs:** users can directly edit text, ask AI for a revision, and retain output versions.
-- **URL-based history:** each generation opens at `/c/:jobId`; past work is searchable in history.
-- **Protected exports:** download access requires sign-in and ownership of the job.
-- **Audit ledger:** source/output hashes are linked to a persistent cryptographic chain and can be verified later.
+- **Multiple input paths:** paste text, provide a web or YouTube URL, or upload supported files.
+- **Nine generated deliverables:** social posts, briefs, a presentation, infographic, video package, and smart-contract audit.
+- **Shared source context:** extracts a summary, intent, key points, entities, CVE identifiers, domain, source category, and risk severity for the requested outputs.
+- **Long-source processing:** large text is split into chunks and summarized before context extraction.
+- **Parallel generation:** selected output generators run from the same extracted context.
+- **Source-grounding review:** generated content receives an AI-assisted consistency check against extracted source facts.
+- **Personal preferences:** onboarding and settings store profile information and defaults such as tone, language, detail level, audience, and video duration.
+- **Manual and AI-assisted editing:** edit an output directly or request a revision in natural language. Edited versions are saved with the job.
+- **History and shareable app routes:** each job has a `/c/:id` route and appears in the signed-in user's history.
+- **Export and download:** generated content can be downloaded in its corresponding supported export format.
+- **Cryptographic audit seal:** each completed job records hashes in a persistent, private hash chain. The app can verify the chain and compare stored source and original output content with their sealed hashes.
+- **Authenticated, owner-scoped records:** job, settings, edit, revision, download, and ledger API routes require authentication and scope data to the signed-in user.
 
-## User flow
+## Supported inputs and outputs
+
+### Inputs
+
+The backend accepts pasted text and URLs, plus up to five uploaded files per generation (50 MB maximum per file). File extraction is selected by file extension and includes:
+
+| Input | Handling |
+|---|---|
+| PDF and Office documents (including DOCX, PPTX, XLSX, ODT, ODP, ODS, RTF) | Text extraction with OfficeParser |
+| CSV, Markdown, EPUB, HTML | Text extraction with OfficeParser |
+| JPG, JPEG, PNG, WEBP, GIF | Image-to-text description via Gemini |
+| MP3, WAV, M4A, MP4, MOV, WEBM | Media transcription via Gemini File API |
+| YouTube URL | Transcript extraction when available |
+| Other web URL | Page retrieval and HTML text extraction |
+| Pasted content | Passed to source preprocessing directly |
+
+The current upload widget advertises PDF, DOCX, and images; the backend's extension-based parser supports the additional formats listed above. Actual extraction can depend on the file, URL accessibility, and provider availability.
+
+### Outputs
+
+| Key | Deliverable | Preview/export |
+|---|---|---|
+| `linkedin` | LinkedIn post | Text |
+| `twitter` | X/Twitter thread | Text |
+| `advisory` | Threat advisory | PDF |
+| `execSummary` | Executive summary | PDF |
+| `presentation` | Presentation content | PPTX |
+| `infographic` | Infographic | Image |
+| `videoPackage` | Narration script, storyboard, subtitles, and visual direction | Text; structured preview in app |
+| `threatIntel` | Threat-intelligence brief | PDF |
+| `contractAudit` | Smart-contract security audit | Text |
+
+## How a generation works
 
 ```text
 Sign in
-  → first-time profile and generation preferences
-  → add a source and select outputs
-  → extract source context
-  → generate and validate outputs in parallel
-  → seal a cryptographic audit record
-  → edit manually or request an AI revision
-  → download securely or reopen from history
+  → set profile and preferences
+  → paste, link, or upload source material
+  → preprocess and summarize long sources
+  → extract facts, entities, domain, and risk context
+  → generate selected deliverables in parallel
+  → validate outputs against extracted context
+  → save the job and seal its source/output hashes
+  → review, edit, revise, download, or reopen from history
 ```
 
-## Architecture
+If context extraction determines that essential information is missing, the API can return a clarification question. The client can resume the job with clarification answers or explicitly proceed with the available context.
+
+## Application pages
+
+| Route | Access | Purpose |
+|---|---|---|
+| `/` | Public | Product landing page |
+| `/sign-in/*` | Public | Clerk sign-in |
+| `/sign-up/*` | Public | Clerk sign-up |
+| `/dashboard` | Signed in | Create a generation and review its outputs |
+| `/c/:id` | Signed in | Open a saved generation |
+| `/history` | Signed in | Find previous jobs |
+| `/settings` | Signed in | Update profile and generation defaults |
+
+## Technology and architecture
 
 ```text
-React + Clerk workspace
-  ├── /dashboard     New generation
-  ├── /c/:id         Saved generation
-  ├── /history       Prior generations
-  └── /settings      Personalized defaults
-          │
-Express API + Clerk authentication
-  ├── Preprocessing: files, pasted text, URLs, media
-  ├── Context extraction: facts, entities, intent, risk
-  ├── Orchestrator: parallel output generators
-  ├── Validation: source-context consistency check
-  ├── Formatter: TXT, PDF, PPTX, or image export
-  └── Audit ledger: persistent cryptographic hash chain
-          │
-MongoDB: jobs, versions, user settings, ledger blocks
+React client (Vite, Tailwind CSS, React Router, Clerk)
+  └── Express API (Clerk authentication)
+       ├── Preprocessing: OfficeParser, Gemini, URL retrieval, YouTube transcripts
+       ├── Context extraction and long-source chunking
+       ├── Parallel generators and AI-assisted validation
+       ├── Export formatting: TXT, PDF, PPTX, image
+       ├── Job, settings, and ledger controllers
+       └── MongoDB / Mongoose persistence
 ```
 
-## Output formats
+**Client:** React 19, Vite, Tailwind CSS, React Router, Axios, react-dropzone, lucide-react, React Markdown, Clerk.
 
-| Key | Output |
-|---|---|
-| `linkedin` | LinkedIn post |
-| `twitter` | X/Twitter thread |
-| `advisory` | Structured advisory |
-| `execSummary` | Executive summary |
-| `presentation` | Presentation outline and PPTX export |
-| `infographic` | Infographic image |
-| `videoPackage` | Video script/storyboard package |
-| `threatIntel` | Threat-intelligence brief |
-| `contractAudit` | Smart-contract security audit |
+**Server:** Node.js, Express 5, MongoDB/Mongoose, Google Gemini (`@google/genai`), Multer, OfficeParser, PPTXGenJS, Puppeteer, YouTube Transcript Plus, Clerk, and Node.js cryptography.
 
-## Tech stack
-
-**Frontend:** React 19, Vite, Tailwind CSS, React Router, Axios, react-dropzone, lucide-react, React Markdown, Clerk.
-
-**Backend:** Node.js, Express 5, MongoDB/Mongoose, Google Gemini (`@google/genai`), Multer, OfficeParser, PPTXGenJS, Puppeteer, YouTube Transcript Plus, Clerk, and Node.js cryptography.
-
-## Project structure
-
-```text
-MentosAI/
-├── client/
-│   └── src/
-│       ├── pages/          Dashboard, conversation, history, settings
-│       ├── components/     Input, sidebar, preview, onboarding UI
-│       ├── hooks/          Generation state
-│       └── services/       API client
-└── server/
-    └── src/
-        ├── controllers/    Generation, jobs, settings
-        ├── middlewares/    Authentication and upload handling
-        ├── models/         Job, user settings, ledger block
-        ├── pipeline/       Preprocessing, context, generation, validation, export
-        ├── routes/         API routes
-        └── services/       Gemini and cryptographic ledger
-```
-
-## Local setup
+## Run locally
 
 ### Prerequisites
 
-- Node.js 20+
-- MongoDB connection string
-- Gemini API key
+- Node.js 20 or newer
+- MongoDB database and connection string
+- Google Gemini API key
 - Clerk application keys
 
-### Backend
+### 1. Configure environment
+
+Create `server/.env` and `client/.env` using the variables in [Environment variables](#environment-variables).
+
+### 2. Start the API
 
 ```bash
 cd server
@@ -116,9 +138,9 @@ npm install
 npm run dev
 ```
 
-The API runs at `http://localhost:5000`. Test it with `GET /health`.
+The API defaults to `http://localhost:5000`; `GET /health` is the public health check.
 
-### Frontend
+### 3. Start the web client
 
 In another terminal:
 
@@ -128,9 +150,25 @@ npm install
 npm run dev
 ```
 
-The app runs at `http://localhost:5173`.
+Vite serves the app at `http://localhost:5173` by default.
 
-### Environment variables
+### Useful project scripts
+
+```bash
+# Client
+npm run dev
+npm run build
+npm run lint
+
+# Server
+npm run dev
+npm start
+npm test
+```
+
+Run each command from its respective `client` or `server` directory.
+
+## Environment variables
 
 Create `server/.env`:
 
@@ -150,73 +188,82 @@ VITE_API_BASE_URL=http://localhost:5000
 VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 ```
 
-## App routes
+Keep real credentials out of source control. `STRICT_REVERIFICATION=true` enables Clerk strict reverification for fetching an individual job when the session supports it.
 
-| Route | Access | Purpose |
-|---|---|---|
-| `/` | Public | Landing page |
-| `/sign-in/*` | Public | Sign in |
-| `/sign-up/*` | Public | Sign up |
-| `/dashboard` | Signed in | New generation workspace |
-| `/c/:id` | Signed in | One saved generation |
-| `/history` | Signed in | Searchable generation history |
-| `/settings` | Signed in | User defaults |
+## API reference
 
-## API overview
-
-All routes below require a valid Clerk bearer token.
+Except for `GET /health`, API routes require a valid Clerk bearer token. Generation requests use `multipart/form-data`.
 
 | Method | Endpoint | Purpose |
 |---|---|---|
-| `POST` | `/api/generate` | Create or resume a generation job |
-| `GET` | `/api/jobs` | List the signed-in user's jobs |
+| `GET` | `/health` | Public API health status |
+| `POST` | `/api/generate` | Create a job or resume a clarification job |
+| `GET` | `/api/jobs` | List the current user's jobs |
 | `GET` | `/api/jobs/:id` | Fetch one owned job |
-| `PUT` | `/api/jobs/:id/outputs/:type` | Save a manual edit |
-| `POST` | `/api/jobs/:id/outputs/:type/revise` | Revise an output with AI |
+| `PUT` | `/api/jobs/:id/outputs/:type` | Save a manual output edit |
+| `POST` | `/api/jobs/:id/outputs/:type/revise` | Request an AI revision |
 | `GET` | `/api/jobs/:id/outputs/:type/download` | Download an owned output |
-| `GET` / `PUT` | `/api/settings` | Read or update preferences |
-| `GET` | `/api/ledger/verify/:jobId` | Verify a job audit seal |
-| `GET` | `/api/ledger/chain?limit=10` | View recent user ledger blocks |
+| `GET` | `/api/settings` | Read user settings |
+| `PUT` | `/api/settings` | Update user settings |
+| `GET` | `/api/ledger/verify/:jobId` | Verify an owned job's audit seal |
+| `GET` | `/api/ledger/chain?limit=10` | Read recent ledger blocks for the user (maximum 50) |
 
-### `POST /api/generate` fields
-
-Submit multipart form data.
+### Generation request fields
 
 | Field | Description |
 |---|---|
-| `files` | Up to five source files; 50 MB maximum each |
+| `files` | Up to five uploaded files; maximum 50 MB each |
 | `sourceType` | `text`, `pdf`, `docx`, `sol`, `image`, `audio`, `video`, or `url` |
-| `rawText` | Pasted source text or a URL |
-| `outputTypes` | JSON array, e.g. `["linkedin","advisory"]` |
-| `config` | JSON with tone, audience, language, detail level, and duration |
-| `jobId` | Existing job ID when answering a clarification request |
-| `clarificationAnswers` | Answer to an AI clarification question |
-| `overrideClarification` | `true` to proceed with available source context |
+| `rawText` | Pasted source text; a bare HTTP(S) URL is treated as a URL |
+| `url` | Source webpage or supported YouTube URL |
+| `outputTypes` | JSON array of output keys, e.g. `["linkedin", "advisory"]` |
+| `config` | JSON preferences such as `tone`, `audience`, `language`, `detailLevel`, and `targetDuration` |
+| `jobId` | Existing job ID when resuming generation |
+| `clarificationAnswers` | Text answering the clarification question |
+| `overrideClarification` | Set to `true` to proceed with available context |
 
-## Audit ledger
+Supported configuration values include detail levels `brief`, `standard`, `detailed`; video durations `30s`, `60-90s`, `3-5 min`; and the client languages English, Hindi, Spanish, French, German, Arabic, Portuguese, and Chinese.
 
-MentosAI uses a **private, persistent cryptographic hash chain**; it is not a public cryptocurrency network.
+## Project layout
 
-Every completed job seals the retained source-text hash, original generated-output hash, validation score, CVE references, domain, timestamp, and previous-block hash. Verification checks ledger linkage and confirms that the retained source and original AI output still match their sealed hashes. User edits create later versions and do not rewrite the original sealed AI output.
-
-## Testing
-
-```bash
-cd client
-npm run lint
-npm run build
-
-cd ../server
-npm test
+```text
+MentosAI/
+├── client/
+│   └── src/
+│       ├── components/       Workspace, previews, forms, onboarding, landing UI
+│       ├── pages/            Dashboard, conversation, history, settings, auth
+│       ├── hooks/             Generation state
+│       └── services/          API client
+└── server/
+    └── src/
+        ├── config/            Database and environment configuration
+        ├── controllers/       Generation, jobs, settings
+        ├── middlewares/       Authentication and uploads
+        ├── models/            Jobs, settings, ledger blocks
+        ├── pipeline/          Preprocessing, context, generation, validation, export
+        ├── routes/            API route definitions
+        ├── services/          Gemini, storage, cryptographic ledger
+        └── utils/             Logging and token counting
 ```
 
-## Current limitations
+## Security and audit notes
 
-- Validation is AI-assisted and should support—not replace—expert review.
-- Source text is retained privately per user to enable source-hash verification. A production deployment should add encryption and explicit retention/deletion controls.
-- The private ledger is tamper-evident, not decentralized public-blockchain proof.
-- LinkedIn URLs can be blocked by login and anti-bot restrictions; pasting post text is the reliable workflow.
+- Job and settings access is scoped by the authenticated Clerk user ID.
+- The upload endpoint limits requests to five files, 50 MB each, and 25 generation requests per 15 minutes.
+- Output downloads are served through an authenticated API endpoint.
+- The audit ledger is a **private, persistent cryptographic hash chain**, not a public blockchain or cryptocurrency network.
+- A completed job's block commits to the source hash, original generated-output hash, validation score, CVE references, domain, timestamp, and preceding block hash. Verification checks the chain linkage and compares stored source and original output content with those hashes.
+- User edits and AI revisions are kept as later versions; they do not replace the original generated content covered by the seal.
+
+## Known limitations
+
+- Validation is AI-assisted and can miss errors or flag correct content; an expert should review security decisions and publication-ready material.
+- Source text is retained privately with the job so source-hash verification remains possible. A production deployment should define encryption, retention, and deletion controls.
+- Web extraction may fail on sites that require login, block automated requests, or return unsupported content. Pasting the relevant text is a useful fallback.
+- YouTube transcript extraction depends on a transcript being available.
+- Ledger verification requires the corresponding persistent ledger data. Jobs created before persistent ledger support may not be verifiable after a server restart.
+- Supported file extensions do not guarantee that every file can be extracted successfully; encrypted, malformed, or image-only documents may need preprocessing or OCR support.
 
 ---
 
-Built for Smart India Hackathon 2026 by Team KALKI.
+Built for Smart India Hackathon 2026 by **Team KALKI**.
