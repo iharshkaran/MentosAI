@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5000" : "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || (import.meta.env.DEV ? "http://localhost:5000" : "")).replace(/\/+$/, "");
 
 if (!API_BASE_URL) {
   throw new Error("Missing VITE_API_BASE_URL. Set it to the deployed API URL in your Vercel project settings.");
@@ -26,6 +26,9 @@ export const getJobs = async (getToken) => {
   const response = await api.get("/api/jobs", {
     headers: { Authorization: `Bearer ${token}` },
   });
+  if (!Array.isArray(response.data)) {
+    throw new Error("The API returned an unexpected response for /api/jobs. Check VITE_API_BASE_URL and the Render API deployment.");
+  }
   return response.data;
 };
 

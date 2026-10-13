@@ -102,6 +102,7 @@ const NavItem = ({ to, onClick, icon: Icon, label, collapsed, active, badge }) =
 const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobId, refreshTrigger }) => {
     const [jobs, setJobs] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [jobsError, setJobsError] = useState("");
     const { getToken } = useAuth();
     const { user } = useUser();
     const location = useLocation();
@@ -109,10 +110,22 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobI
     const collapsed = !isPinned;
 
     useEffect(() => {
+        let cancelled = false;
+        setLoading(true);
+        setJobsError("");
         getJobs(getToken)
-            .then((data) => setJobs(data || []))
-            .catch(() => {})
-            .finally(() => setLoading(false));
+            .then((data) => {
+                if (!cancelled) setJobs(data);
+            })
+            .catch((error) => {
+                if (cancelled) return;
+                setJobs([]);
+                setJobsError(error.message || "Could not connect to the API.");
+            })
+            .finally(() => {
+                if (!cancelled) setLoading(false);
+            });
+        return () => { cancelled = true; };
     }, [getToken, refreshTrigger]);
 
     return (
@@ -215,6 +228,8 @@ const Sidebar = ({ isPinned, setIsPinned, onNewDocument, onSelectJob, activeJobI
                             {!collapsed && <div className="h-3 flex-1 rounded bg-[#f1f0f9] animate-pulse" />}
                         </div>
                     ))
+                ) : jobsError ? (
+                    !collapsed && <p className="px-3 py-2 text-xs text-amber-700" title={jobsError}>Could not load generations. Check the API URL and backend.</p>
                 ) : jobs.length === 0 ? (
                     !collapsed && <p className="px-3 py-2 text-xs text-[#9a9aae]">No generations yet</p>
                 ) : (
