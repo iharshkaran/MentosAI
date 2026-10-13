@@ -24,7 +24,7 @@ const UploadForm = ({ onFileSelect, setSourceType, rawText, setRawText }) => {
         [onFileSelect, setSourceType]
     );
 
-    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, maxFiles: 1 });
+    const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop, maxFiles: 1, maxSize: 25 * 1024 * 1024 });
 
     const clearFile = () => {
         setFile(null);
@@ -56,7 +56,7 @@ const UploadForm = ({ onFileSelect, setSourceType, rawText, setRawText }) => {
                         Click to upload or drag and drop
                     </h3>
                     <p className="text-xs text-zinc-500 font-medium">
-                        PDF, DOCX, or Images (max 10MB)
+                        PDF, DOCX, or Images (max 25MB)
                     </p>
                 </div>
             ) : (

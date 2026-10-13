@@ -98,6 +98,14 @@ const outputSchema = new mongoose.Schema(
     { _id: false }
 );
 
+const sourceFileSchema = new mongoose.Schema({
+    key: { type: String, required: true },
+    originalName: { type: String, required: true },
+    contentType: { type: String, required: true },
+    size: { type: Number, required: true },
+    uploadedAt: { type: Date, default: Date.now },
+});
+
 const jobSchema = new mongoose.Schema(
     {
         userId: {
@@ -121,6 +129,7 @@ const jobSchema = new mongoose.Schema(
             default: "pending",
         },
         context: contextSchema,
+        sourceFiles: [sourceFileSchema],
         outputs: [outputSchema],
         blockchainProof: blockchainProofSchema,
         sourceHash: { type: String, select: false },

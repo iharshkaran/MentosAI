@@ -8,6 +8,7 @@ const { runOrchestrator } = require("../pipeline/orchestrator/orchestrator");
 const { validateOutput } = require("../pipeline/validator/validateOutput");
 const { formatOutput } = require("../pipeline/formatter");
 const { blockchainLedger } = require("../services/blockchainLedger.service");
+const { saveSourceFile } = require("../services/objectStorage.service");
 
 const parseIfNeeded = (data) => {
     if (!data) return {};
@@ -39,6 +40,18 @@ const generateContent = asyncHandler(async (req, res) => {
     const clarificationAnswers = (req.body.clarificationAnswers || "").trim();
 
     let job;
+    let sourceFilesSaved = false;
+
+    const saveSourceFiles = async () => {
+        if (sourceFilesSaved || !req.files?.length) return;
+        const records = [];
+        for (const file of req.files) {
+            records.push(await saveSourceFile({ file, userId, jobId: job._id }));
+        }
+        job.sourceFiles.push(...records);
+        await job.save();
+        sourceFilesSaved = true;
+    };
 
     try {
         if (resumeJobId) {
@@ -78,6 +91,8 @@ const generateContent = asyncHandler(async (req, res) => {
             }
             cleanText = preprocessed.cleanText;
         }
+
+        await saveSourceFiles();
 
         if (clarificationAnswers) {
             cleanText = `${cleanText}\n\n--- Operator Clarification ---\n${clarificationAnswers}`;
@@ -142,7 +157,7 @@ const generateContent = asyncHandler(async (req, res) => {
                 try {
                     const [validation, exportedFilePath] = await Promise.all([
                         validateOutput(raw.content, context),
-                        formatOutput(raw.type, raw.content),
+                        formatOutput(raw.type, raw.content, { userId, jobId: job._id }),
                     ]);
 
                     return {

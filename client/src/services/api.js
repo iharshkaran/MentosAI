@@ -78,4 +78,13 @@ export const downloadOutput = async (jobId, type, getToken) => {
   return response.data;
 };
 
+export const downloadSourceFile = async (jobId, fileId, getToken) => {
+  const token = await getToken();
+  const response = await api.get(`/api/jobs/${jobId}/source-files/${fileId}/download`, {
+    headers: { Authorization: `Bearer ${token}` },
+    responseType: "blob",
+  });
+  return response.data;
+};
+
 export default api;

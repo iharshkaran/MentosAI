@@ -17,7 +17,7 @@ const generateLimiter = rateLimit({
 const upload = multer({
   dest: "uploads/",
   limits: {
-    fileSize: 50 * 1024 * 1024,
+    fileSize: 25 * 1024 * 1024,
     files: 5,
   },
 });
@@ -30,7 +30,7 @@ router.post(
     upload.array("files", 5)(req, res, (err) => {
       if (err) {
         const message = err.code === "LIMIT_FILE_SIZE"
-          ? "Each file must be 50MB or smaller."
+          ? "Each file must be 25MB or smaller."
           : err.code === "LIMIT_FILE_COUNT"
             ? "A maximum of 5 files is allowed."
             : err.message;

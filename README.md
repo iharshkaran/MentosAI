@@ -44,7 +44,7 @@ Teams often need to turn an incident report, advisory, research document, articl
 
 ### Inputs
 
-The backend accepts pasted text and URLs, plus up to five uploaded files per generation (50 MB maximum per file). File extraction is selected by file extension and includes:
+The backend accepts pasted text and URLs, plus up to five uploaded files per generation (25 MB maximum per file). File extraction is selected by file extension and includes:
 
 | Input | Handling |
 |---|---|
@@ -110,6 +110,7 @@ React client (Vite, Tailwind CSS, React Router, Clerk)
        ├── Parallel generators and AI-assisted validation
        ├── Export formatting: TXT, PDF, PPTX, image
        ├── Job, settings, and ledger controllers
+       ├── Private ImageKit storage for source files and exports
        └── MongoDB / Mongoose persistence
 ```
 
@@ -181,7 +182,7 @@ Set these values under the Vercel project's Environment Variables for each deplo
 
 Redeploy after adding or changing environment variables. The client build only exposes variables prefixed with `VITE_`; never put `CLERK_SECRET_KEY`, `GEMINI_API_KEY`, or `MONGO_URI` in the Vercel frontend project. Configure those secrets on the API host. The API must allow browser requests from the Vercel site, and the production site URL must be added to Clerk's allowed origins/redirect URLs. See [client/.env.example](client/.env.example) for the local client variable names.
 
-Vercel hosts the frontend only with this setup. The Express API, MongoDB, Gemini credentials, and durable storage for generated export files need their own production hosting and configuration.
+Vercel hosts the frontend only with this setup. The Express API, MongoDB, Gemini credentials, and ImageKit credentials need their own production hosting and configuration. Configure ImageKit on the API host as described below.
 
 ## Environment variables
 
@@ -194,6 +195,8 @@ GEMINI_API_KEY=your_gemini_api_key
 CLERK_SECRET_KEY=your_clerk_secret_key
 CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 STRICT_REVERIFICATION=false
+IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
+IMAGEKIT_PRIVATE_KEY=your_imagekit_private_key
 ```
 
 Create `client/.env`:
@@ -204,6 +207,10 @@ VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 ```
 
 Keep real credentials out of source control. `STRICT_REVERIFICATION=true` enables Clerk strict reverification for fetching an individual job when the session supports it.
+
+### User file storage
+
+Create an ImageKit account and copy its URL endpoint and private API key from the developer settings. Configure `IMAGEKIT_URL_ENDPOINT` and `IMAGEKIT_PRIVATE_KEY` on the **API server**; [server/.env.example](server/.env.example) lists them. The API uploads source documents and generated downloads as private assets in per-user, per-job folders; users can retrieve them only through the authenticated, owner-checked API, which creates short-lived signed delivery URLs server-side. Never expose the private key in the frontend or a `VITE_*` variable. Local development uses a private folder under `server/uploads/objects` when ImageKit credentials are omitted; production requires ImageKit credentials before accepting stored files or generating downloads. The upload cap is 25 MB per file to match ImageKit's free-plan raw-file limit. See the [official ImageKit Node.js SDK on GitHub](https://github.com/imagekit-developer/imagekit-nodejs), [private file security documentation](https://imagekit.io/docs/media-delivery-basic-security), and [ImageKit pricing](https://imagekit.io/plans/).
 
 ## API reference
 
@@ -218,6 +225,7 @@ Except for `GET /health`, API routes require a valid Clerk bearer token. Generat
 | `PUT` | `/api/jobs/:id/outputs/:type` | Save a manual output edit |
 | `POST` | `/api/jobs/:id/outputs/:type/revise` | Request an AI revision |
 | `GET` | `/api/jobs/:id/outputs/:type/download` | Download an owned output |
+| `GET` | `/api/jobs/:id/source-files/:fileId/download` | Download an owned source file |
 | `GET` | `/api/settings` | Read user settings |
 | `PUT` | `/api/settings` | Update user settings |
 | `GET` | `/api/ledger/verify/:jobId` | Verify an owned job's audit seal |
@@ -227,7 +235,7 @@ Except for `GET /health`, API routes require a valid Clerk bearer token. Generat
 
 | Field | Description |
 |---|---|
-| `files` | Up to five uploaded files; maximum 50 MB each |
+| `files` | Up to five uploaded files; maximum 25 MB each |
 | `sourceType` | `text`, `pdf`, `docx`, `sol`, `image`, `audio`, `video`, or `url` |
 | `rawText` | Pasted source text; a bare HTTP(S) URL is treated as a URL |
 | `url` | Source webpage or supported YouTube URL |
@@ -265,7 +273,7 @@ MentosAI/
 ## Security and audit notes
 
 - Job and settings access is scoped by the authenticated Clerk user ID.
-- The upload endpoint limits requests to five files, 50 MB each, and 25 generation requests per 15 minutes.
+- The upload endpoint limits requests to five files, 25 MB each, and 25 generation requests per 15 minutes.
 - Output downloads are served through an authenticated API endpoint.
 - The audit ledger is a **private, persistent cryptographic hash chain**, not a public blockchain or cryptocurrency network.
 - A completed job's block commits to the source hash, original generated-output hash, validation score, CVE references, domain, timestamp, and preceding block hash. Verification checks the chain linkage and compares stored source and original output content with those hashes.
@@ -274,7 +282,7 @@ MentosAI/
 ## Known limitations
 
 - Validation is AI-assisted and can miss errors or flag correct content; an expert should review security decisions and publication-ready material.
-- Source text is retained privately with the job so source-hash verification remains possible. A production deployment should define encryption, retention, and deletion controls.
+- Source text and uploaded originals are retained privately with the job. A production deployment should define retention and deletion controls; the app does not currently offer users a delete action for stored source files.
 - Web extraction may fail on sites that require login, block automated requests, or return unsupported content. Pasting the relevant text is a useful fallback.
 - YouTube transcript extraction depends on a transcript being available.
 - Ledger verification requires the corresponding persistent ledger data. Jobs created before persistent ledger support may not be verifiable after a server restart.

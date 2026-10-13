@@ -4,6 +4,7 @@ const { reverificationErrorResponse } = require("@clerk/shared/authorization-err
 const Job = require("../models/Job");
 const { askClaude } = require("../services/llm.service");
 const { formatOutput } = require("../pipeline/formatter");
+const { downloadObject } = require("../services/objectStorage.service");
 
 const findOwnedOutput = async (req) => {
   let job = null;
@@ -45,7 +46,15 @@ const getJobById = asyncHandler(async (req, res) => {
     return res.status(404).json({ error: "Not found" });
   }
 
-  res.status(200).json(job);
+  const responseJob = job.toObject();
+  responseJob.sourceFiles = (responseJob.sourceFiles || []).map(({ _id, originalName, contentType, size, uploadedAt }) => ({
+    _id,
+    originalName,
+    contentType,
+    size,
+    uploadedAt,
+  }));
+  res.status(200).json(responseJob);
 });
 
 const saveOutputEdit = asyncHandler(async (req, res) => {
@@ -56,7 +65,7 @@ const saveOutputEdit = asyncHandler(async (req, res) => {
   if (!job || !output) return res.status(404).json({ error: "Output not found" });
 
   output.editedContent = content;
-  output.exportedFilePath = await formatOutput(output.type, content);
+  output.exportedFilePath = await formatOutput(output.type, content, { userId: job.userId, jobId: job._id });
   if (!Array.isArray(output.versions)) {
     output.versions = [];
   }
@@ -88,7 +97,7 @@ CVE IDs: ${(context.cveIds || []).join(", ")}
 Return only the complete revised artifact, ready to use.`, 2048);
 
   output.editedContent = revisedContent;
-  output.exportedFilePath = await formatOutput(output.type, revisedContent);
+  output.exportedFilePath = await formatOutput(output.type, revisedContent, { userId: job.userId, jobId: job._id });
   if (!Array.isArray(output.versions)) {
     output.versions = [];
   }
@@ -100,9 +109,22 @@ Return only the complete revised artifact, ready to use.`, 2048);
 const downloadOutput = asyncHandler(async (req, res) => {
   const { job, output } = await findOwnedOutput(req);
   if (!job || !output?.exportedFilePath) return res.status(404).json({ error: "Download not found" });
+  if (output.exportedFilePath.startsWith("imagekit:")) {
+    const key = output.exportedFilePath;
+    const extension = require("path").extname(key.slice("imagekit:".length));
+    const names = { presentation: "presentation.pptx", advisory: "advisory.pdf", execSummary: "executive-summary.pdf", threatIntel: "threat-intelligence.pdf", infographic: "infographic.png" };
+    return downloadObject(key, res, names[output.type] || `${output.type}${extension}`);
+  }
   const path = require("path");
   const filePath = path.join(__dirname, "../../outputs", path.basename(output.exportedFilePath));
   return res.download(filePath);
 });
 
-module.exports = { listJobs, getJobById, saveOutputEdit, reviseOutput, downloadOutput };
+const downloadSourceFile = asyncHandler(async (req, res) => {
+  const job = await Job.findOne({ _id: req.params.id, userId: req.userId });
+  const sourceFile = job?.sourceFiles?.id(req.params.fileId);
+  if (!sourceFile) return res.status(404).json({ error: "Source file not found" });
+  return downloadObject(sourceFile.key, res, sourceFile.originalName, sourceFile.contentType);
+});
+
+module.exports = { listJobs, getJobById, saveOutputEdit, reviseOutput, downloadOutput, downloadSourceFile };
