@@ -168,6 +168,21 @@ npm test
 
 Run each command from its respective `client` or `server` directory.
 
+## Deploy the frontend to Vercel
+
+The frontend is a Vite single-page app. Create a Vercel project from this repository and set its **Root Directory** to `client`. Use the Vite framework preset, `npm run build` as the build command, and `dist` as the output directory. `client/vercel.json` routes app paths such as `/dashboard` and `/c/:id` back to the client so they work when opened directly.
+
+Set these values under the Vercel project's Environment Variables for each deployment environment:
+
+| Variable | Value |
+|---|---|
+| `VITE_CLERK_PUBLISHABLE_KEY` | Clerk publishable key for the production Clerk application |
+| `VITE_API_BASE_URL` | Public HTTPS origin of the separately deployed Express API, without a trailing slash |
+
+Redeploy after adding or changing environment variables. The client build only exposes variables prefixed with `VITE_`; never put `CLERK_SECRET_KEY`, `GEMINI_API_KEY`, or `MONGO_URI` in the Vercel frontend project. Configure those secrets on the API host. The API must allow browser requests from the Vercel site, and the production site URL must be added to Clerk's allowed origins/redirect URLs. See [client/.env.example](client/.env.example) for the local client variable names.
+
+Vercel hosts the frontend only with this setup. The Express API, MongoDB, Gemini credentials, and durable storage for generated export files need their own production hosting and configuration.
+
 ## Environment variables
 
 Create `server/.env`:
@@ -229,6 +244,7 @@ Supported configuration values include detail levels `brief`, `standard`, `detai
 ```text
 MentosAI/
 ├── client/
+│   ├── vercel.json          SPA route fallback for Vercel
 │   └── src/
 │       ├── components/       Workspace, previews, forms, onboarding, landing UI
 │       ├── pages/            Dashboard, conversation, history, settings, auth
