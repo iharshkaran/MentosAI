@@ -208,6 +208,14 @@ VITE_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
 
 Keep real credentials out of source control. `STRICT_REVERIFICATION=true` enables Clerk strict reverification for fetching an individual job when the session supports it.
 
+### Deploy the backend to Render
+
+This repository includes a Render Blueprint at [render.yaml](render.yaml). In Render, create a new Blueprint from the GitHub repository and provide the requested secret values. The Blueprint sets the API root directory to `server`, installs with `npm ci`, starts with `npm start`, and checks `GET /health`. The API binds to Render's `PORT` on `0.0.0.0`.
+
+Set `CORS_ORIGINS` to the exact Vercel production origin, for example `https://your-app.vercel.app` (no trailing slash). Add any Vercel preview origins you need as comma-separated values. After Render deploys, copy its `https://...onrender.com` URL into Vercel's `VITE_API_BASE_URL`, then redeploy the frontend. Add that production site origin to the Clerk application's allowed origins and redirect URLs. `MONGO_URI`, `GEMINI_API_KEY`, both `CLERK_*` keys, and both `IMAGEKIT_*` values must be entered as Render environment variables; keep them out of Git and Vercel's frontend environment.
+
+Render's free web service sleeps after 15 minutes without traffic and can take about a minute to wake up. Its filesystem is ephemeral, so this app relies on MongoDB and ImageKit for persistent data and uploaded files rather than local files in production. Free Render is suitable for demos, with cold starts and resource limits; see [Render's free service limitations](https://render.com/docs/free).
+
 ### User file storage
 
 Create an ImageKit account and copy its URL endpoint and private API key from the developer settings. Configure `IMAGEKIT_URL_ENDPOINT` and `IMAGEKIT_PRIVATE_KEY` on the **API server**; [server/.env.example](server/.env.example) lists them. The API uploads source documents and generated downloads as private assets in per-user, per-job folders; users can retrieve them only through the authenticated, owner-checked API, which creates short-lived signed delivery URLs server-side. Never expose the private key in the frontend or a `VITE_*` variable. Local development uses a private folder under `server/uploads/objects` when ImageKit credentials are omitted; production requires ImageKit credentials before accepting stored files or generating downloads. The upload cap is 25 MB per file to match ImageKit's free-plan raw-file limit. See the [official ImageKit Node.js SDK on GitHub](https://github.com/imagekit-developer/imagekit-nodejs), [private file security documentation](https://imagekit.io/docs/media-delivery-basic-security), and [ImageKit pricing](https://imagekit.io/plans/).
