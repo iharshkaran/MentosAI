@@ -97,7 +97,16 @@ const Dashboard = () => {
             sessionStorage.removeItem("mentos_last_result");
         }
         const sourceType = detectSourceType(file, text);
-        const generated = await generate({ file, sourceType, rawText: text, outputTypes, config, ...extra });
+        // Clarification resumes the existing job. Its source and extracted context
+        // are already stored by the backend, so don't upload/process them again.
+        const generated = await generate({
+            file: extra.jobId ? null : file,
+            sourceType,
+            rawText: extra.jobId ? "" : text,
+            outputTypes,
+            config,
+            ...extra,
+        });
         if (generated?._id) navigate(`/c/${generated._id}`);
     };
 

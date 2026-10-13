@@ -75,7 +75,9 @@ const generateContent = asyncHandler(async (req, res) => {
             });
         }
 
-        const hasNewSource = (req.files && req.files.length > 0) || req.body.rawText || req.body.url;
+        // A resumed clarification job already has its source and extracted context.
+        // Ignore any source accidentally resent by older frontend builds.
+        const hasNewSource = !resumeJobId && ((req.files && req.files.length > 0) || req.body.rawText || req.body.url);
         let cleanText = job.processedSourceText || null;
 
         if (hasNewSource || !cleanText) {
@@ -92,15 +94,17 @@ const generateContent = asyncHandler(async (req, res) => {
             cleanText = preprocessed.cleanText;
         }
 
-        await saveSourceFiles();
+        if (!resumeJobId) await saveSourceFiles();
 
         if (clarificationAnswers) {
             cleanText = `${cleanText}\n\n--- Operator Clarification ---\n${clarificationAnswers}`;
         }
 
-        const context = await extractContext(cleanText, {
-            detailLevel: parsedConfig.detailLevel || job.config?.detailLevel,
-        });
+        const context = resumeJobId && job.context
+            ? job.context.toObject?.() || job.context
+            : await extractContext(cleanText, {
+                detailLevel: parsedConfig.detailLevel || job.config?.detailLevel,
+            });
 
         const shouldAskClarification =
             context.needsClarification && !overrideClarification && !clarificationAnswers;

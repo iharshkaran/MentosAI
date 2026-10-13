@@ -47,7 +47,13 @@ const getJobById = asyncHandler(async (req, res) => {
   }
 
   const responseJob = job.toObject();
-  responseJob.sourceFiles = (responseJob.sourceFiles || []).map(({ _id, originalName, contentType, size, uploadedAt }) => ({
+  const seenSourceFiles = new Set();
+  responseJob.sourceFiles = (responseJob.sourceFiles || []).filter((file) => {
+    const identity = `${file.originalName}\u0000${file.contentType}\u0000${file.size}`;
+    if (seenSourceFiles.has(identity)) return false;
+    seenSourceFiles.add(identity);
+    return true;
+  }).map(({ _id, originalName, contentType, size, uploadedAt }) => ({
     _id,
     originalName,
     contentType,
